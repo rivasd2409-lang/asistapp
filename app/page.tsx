@@ -153,7 +153,7 @@ export default async function Home() {
   return (
     <main className="p-6 space-y-8">
       <section>
-        <h1 className="text-2xl font-bold">Asistapp Ã°Å¸Å¡â‚¬</h1>
+        <h1 className="text-2xl font-bold">Asistapp 🚀</h1>
         <p className="mt-4">Usuarios en base de datos: {users.length}</p>
 
         <form action={createUser} className="mt-4">
@@ -305,17 +305,17 @@ export default async function Home() {
 
         <form action={createTask} className="space-y-3">
           <div>
-            <label className="mb-1 block">TÃƒÂ­tulo</label>
+            <label className="mb-1 block">Título</label>
             <input
               name="title"
               type="text"
-              placeholder="Ej: Dar medicamento de la maÃƒÂ±ana"
+              placeholder="Ej: Dar medicamento de la mañana"
               className="w-full rounded border border-white/20 bg-black px-3 py-2"
             />
           </div>
 
           <div>
-            <label className="mb-1 block">DescripciÃƒÂ³n</label>
+            <label className="mb-1 block">Descripción</label>
             <textarea
               name="description"
               placeholder="Detalles de la tarea"
