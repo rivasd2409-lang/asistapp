@@ -1,5 +1,8 @@
 import { prisma } from "@/lib/db";
 
+import { TaskList } from "./task-list";
+import { normalizeTaskStatus } from "./task-status";
+
 async function createUser() {
   "use server";
 
@@ -142,10 +145,15 @@ export default async function Home() {
     },
   });
 
+  const normalizedTasks = tasks.map((task) => ({
+    ...task,
+    status: normalizeTaskStatus(task.status),
+  }));
+
   return (
     <main className="p-6 space-y-8">
       <section>
-        <h1 className="text-2xl font-bold">Asistapp 🚀</h1>
+        <h1 className="text-2xl font-bold">Asistapp Ã°Å¸Å¡â‚¬</h1>
         <p className="mt-4">Usuarios en base de datos: {users.length}</p>
 
         <form action={createUser} className="mt-4">
@@ -297,17 +305,17 @@ export default async function Home() {
 
         <form action={createTask} className="space-y-3">
           <div>
-            <label className="mb-1 block">Título</label>
+            <label className="mb-1 block">TÃƒÂ­tulo</label>
             <input
               name="title"
               type="text"
-              placeholder="Ej: Dar medicamento de la mañana"
+              placeholder="Ej: Dar medicamento de la maÃƒÂ±ana"
               className="w-full rounded border border-white/20 bg-black px-3 py-2"
             />
           </div>
 
           <div>
-            <label className="mb-1 block">Descripción</label>
+            <label className="mb-1 block">DescripciÃƒÂ³n</label>
             <textarea
               name="description"
               placeholder="Detalles de la tarea"
@@ -357,20 +365,7 @@ export default async function Home() {
           </button>
         </form>
 
-        <div className="mt-4 space-y-2">
-          {tasks.map((task) => (
-            <div key={task.id} className="rounded border border-white/20 p-3">
-              <p><strong>Título:</strong> {task.title}</p>
-              <p><strong>Descripción:</strong> {task.description || "—"}</p>
-              <p><strong>Estado:</strong> {task.status}</p>
-              <p><strong>Paciente:</strong> {task.patient.name}</p>
-              <p>
-                <strong>Asignado a:</strong>{" "}
-                {task.assignedMember?.user.name || "Sin asignar"}
-              </p>
-            </div>
-          ))}
-        </div>
+        <TaskList tasks={normalizedTasks} />
       </section>
     </main>
   );
