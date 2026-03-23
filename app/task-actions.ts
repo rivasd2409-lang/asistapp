@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 
 import { prisma } from "@/lib/db";
 
+import { normalizeMedicationUnit } from "./medication-units";
 import {
   getNextOccurrenceDueDate,
   normalizeTaskRecurrenceType,
@@ -45,6 +46,58 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
       recurrenceType !== "NONE" &&
       !currentTask.nextOccurrenceTaskId;
 
+    const shouldDecrementInventory =
+      status === "COMPLETED" &&
+      currentTask.status !== "COMPLETED" &&
+      category === "MEDICATION" &&
+      !!currentTask.medicationName;
+
+    if (shouldDecrementInventory) {
+      const medicationName = currentTask.medicationName;
+
+      if (!medicationName) {
+        return updatedTask;
+      }
+
+      const inventoryItem = await tx.medicationInventory.findFirst({
+        where: {
+          patientId: currentTask.patientId,
+          medicationName,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      if (inventoryItem) {
+        const inventoryUnit = normalizeMedicationUnit(inventoryItem.unit);
+        const doseUnit = currentTask.doseUnit
+          ? normalizeMedicationUnit(currentTask.doseUnit)
+          : null;
+        const decrementAmount =
+          currentTask.doseAmount &&
+          Number.isFinite(currentTask.doseAmount) &&
+          currentTask.doseAmount > 0
+            ? currentTask.doseAmount
+            : null;
+
+        if (!inventoryUnit || !doseUnit || !decrementAmount) {
+          return updatedTask;
+        }
+
+        if (inventoryUnit !== doseUnit) {
+          return updatedTask;
+        }
+
+        await tx.medicationInventory.update({
+          where: { id: inventoryItem.id },
+          data: {
+            currentStock: Math.max(0, inventoryItem.currentStock - decrementAmount),
+          },
+        });
+      }
+    }
+
     if (!shouldCreateNextOccurrence) {
       return updatedTask;
     }
@@ -64,6 +117,8 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
         category,
         medicationName: currentTask.medicationName,
         dosage: currentTask.dosage,
+        doseAmount: currentTask.doseAmount,
+        doseUnit: currentTask.doseUnit,
         instructions: currentTask.instructions,
         dueDate: nextDueDate,
         recurrenceType: currentTask.recurrenceType,

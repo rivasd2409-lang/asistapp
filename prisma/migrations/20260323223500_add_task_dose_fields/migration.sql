@@ -1,0 +1,3 @@
+ALTER TABLE "Task"
+ADD COLUMN "doseAmount" DOUBLE PRECISION,
+ADD COLUMN "doseUnit" TEXT;

@@ -45,7 +45,8 @@ model Patient {
 
   group Group @relation(fields: [groupId], references: [id])
 
-  tasks Task[]
+  tasks               Task[]
+  medicationInventory MedicationInventory[]
 }
 
 model Task {
@@ -56,6 +57,8 @@ model Task {
   category         String      @default("GENERAL")
   medicationName   String?
   dosage           String?
+  doseAmount       Float?
+  doseUnit         String?
   instructions     String?
   dueDate          DateTime?
   recurrenceType   String      @default("NONE")
@@ -69,4 +72,17 @@ model Task {
 
   patient          Patient      @relation(fields: [patientId], references: [id])
   assignedMember   GroupMember? @relation(fields: [assignedMemberId], references: [id])
+}
+
+model MedicationInventory {
+  id            String   @id @default(uuid())
+  medicationName String
+  unit          String
+  currentStock  Int
+  minimumStock  Int
+  notes         String?
+  patientId     String
+  createdAt     DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
 }

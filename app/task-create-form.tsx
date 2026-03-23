@@ -3,6 +3,11 @@
 import { useState } from "react";
 
 import {
+  MEDICATION_UNITS,
+  MEDICATION_UNIT_LABELS,
+  type MedicationUnit,
+} from "./medication-units";
+import {
   TASK_CATEGORIES,
   TASK_CATEGORY_LABELS,
   type TaskCategory,
@@ -33,21 +38,22 @@ export function TaskCreateForm({
   members,
 }: TaskCreateFormProps) {
   const [category, setCategory] = useState<TaskCategory>("GENERAL");
+  const [doseUnit, setDoseUnit] = useState<MedicationUnit>("TABLET");
 
   return (
     <form action={action} className="space-y-3">
       <div>
-        <label className="mb-1 block">TÃ­tulo</label>
+        <label className="mb-1 block">Título</label>
         <input
           name="title"
           type="text"
-          placeholder="Ej: Dar medicamento de la maÃ±ana"
+          placeholder="Ej: Dar medicamento de la mañana"
           className="w-full rounded border border-white/20 bg-black px-3 py-2"
         />
       </div>
 
       <div>
-        <label className="mb-1 block">DescripciÃ³n</label>
+        <label className="mb-1 block">Descripción</label>
         <textarea
           name="description"
           placeholder="Detalles de la tarea"
@@ -56,7 +62,7 @@ export function TaskCreateForm({
       </div>
 
       <div>
-        <label className="mb-1 block">CategorÃ­a</label>
+        <label className="mb-1 block">Categoría</label>
         <select
           name="category"
           className="w-full rounded border border-white/20 bg-black px-3 py-2"
@@ -84,16 +90,34 @@ export function TaskCreateForm({
           </div>
 
           <div>
-            <label className="mb-1 block">Dosage</label>
+            <label className="mb-1 block">Dose amount</label>
             <input
-              name="dosage"
-              type="text"
-              placeholder="Ej: 500 mg"
+              name="doseAmount"
+              type="number"
+              min="0.1"
+              step="0.1"
+              placeholder="Ej: 0.5 o 5"
               className="w-full rounded border border-white/20 bg-black px-3 py-2"
             />
           </div>
 
           <div>
+            <label className="mb-1 block">Dose unit</label>
+            <select
+              name="doseUnit"
+              className="w-full rounded border border-white/20 bg-black px-3 py-2"
+              value={doseUnit}
+              onChange={(event) => setDoseUnit(event.target.value as MedicationUnit)}
+            >
+              {MEDICATION_UNITS.map((unit) => (
+                <option key={unit} value={unit}>
+                  {MEDICATION_UNIT_LABELS[unit]}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="sm:col-span-2">
             <label className="mb-1 block">Instructions</label>
             <input
               name="instructions"
@@ -124,7 +148,7 @@ export function TaskCreateForm({
       </div>
 
       <div>
-        <label className="mb-1 block">Fecha y hora limite</label>
+        <label className="mb-1 block">Fecha y hora límite</label>
         <input
           name="dueDate"
           type="datetime-local"

@@ -3,6 +3,7 @@
 import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { formatMedicationDose, type MedicationUnit } from "./medication-units";
 import {
   TASK_CATEGORY_BADGE_CLASSES,
   TASK_CATEGORY_LABELS,
@@ -28,6 +29,8 @@ type TaskListItem = {
   category: TaskCategory;
   medicationName: string | null;
   dosage: string | null;
+  doseAmount: number | null;
+  doseUnit: MedicationUnit | null;
   instructions: string | null;
   status: TaskStatus;
   dueDate: string | null;
@@ -35,6 +38,11 @@ type TaskListItem = {
   recurrenceType: TaskRecurrenceType;
   recurrenceInterval: number | null;
   recurrenceUnit: string | null;
+  inventory: {
+    currentStock: number;
+    minimumStock: number;
+    unit: MedicationUnit;
+  } | null;
   patient: {
     id: string;
     name: string;
@@ -176,6 +184,9 @@ export function TaskList({ tasks }: TaskListProps) {
       recurrenceInterval: task.recurrenceInterval,
       recurrenceUnit: task.recurrenceUnit,
     });
+    const isLowStock =
+      task.inventory !== null &&
+      task.inventory.currentStock <= task.inventory.minimumStock;
 
     return (
       <article
@@ -237,13 +248,44 @@ export function TaskList({ tasks }: TaskListProps) {
                 {task.medicationName || "-"}
               </p>
               <p>
-                <strong className="text-white">Dosage:</strong>{" "}
-                {task.dosage || "-"}
+                <strong className="text-white">Dose:</strong>{" "}
+                {formatMedicationDose(task.doseAmount, task.doseUnit, task.dosage)}
               </p>
               <p>
                 <strong className="text-white">Instructions:</strong>{" "}
                 {task.instructions || "-"}
               </p>
+              {task.inventory ? (
+                <div
+                  className={`rounded-lg border px-3 py-2 ${
+                    isLowStock
+                      ? "border-amber-400/30 bg-amber-400/10"
+                      : "border-white/15 bg-white/5"
+                  }`}
+                >
+                  <p className="text-xs uppercase tracking-wide text-white/55">
+                    Inventario
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    Stock actual:{" "}
+                    {formatMedicationDose(
+                      task.inventory.currentStock,
+                      task.inventory.unit
+                    )}
+                  </p>
+                  <p className="mt-1 text-xs text-white/65">
+                    Stock mínimo:{" "}
+                    {formatMedicationDose(
+                      task.inventory.minimumStock,
+                      task.inventory.unit
+                    )}
+                  </p>
+                </div>
+              ) : (
+                <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white/55">
+                  Sin inventario registrado
+                </p>
+              )}
             </>
           ) : null}
         </div>
@@ -251,6 +293,12 @@ export function TaskList({ tasks }: TaskListProps) {
         {overdue ? (
           <p className="mt-3 rounded border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs font-medium text-red-200">
             Overdue task
+          </p>
+        ) : null}
+
+        {task.category === "MEDICATION" && isLowStock ? (
+          <p className="mt-3 rounded border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-xs font-medium text-amber-200">
+            Stock bajo
           </p>
         ) : null}
 
