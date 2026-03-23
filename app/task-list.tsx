@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { updateTaskStatus } from "./task-actions";
 import {
   TASK_BOARD_STATUSES,
+  TASK_STATUS_BADGE_CLASSES,
   TASK_STATUSES,
   TASK_STATUS_LABELS,
   type TaskStatus,
@@ -93,7 +94,7 @@ export function TaskList({ tasks }: TaskListProps) {
     return (
       <article
         key={task.id}
-        className="rounded border border-white/20 bg-black/30 p-3"
+        className="rounded-xl border border-white/15 bg-black/40 p-4 shadow-sm"
         draggable={!isPending}
         onDragStart={(event) => {
           setDraggedTaskId(task.id);
@@ -105,11 +106,24 @@ export function TaskList({ tasks }: TaskListProps) {
           setDropTargetStatus(null);
         }}
       >
-        <p><strong>Title:</strong> {task.title}</p>
-        <p><strong>Description:</strong> {task.description || "-"}</p>
-        <p><strong>Patient:</strong> {task.patient.name}</p>
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <h4 className="text-sm font-semibold leading-5 text-white">
+            {task.title}
+          </h4>
+          <span
+            className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${TASK_STATUS_BADGE_CLASSES[task.status]}`}
+          >
+            {TASK_STATUS_LABELS[task.status]}
+          </span>
+        </div>
+
+        <div className="space-y-2 text-sm text-white/80">
+          <p><strong className="text-white">Description:</strong> {task.description || "-"}</p>
+          <p><strong className="text-white">Patient:</strong> {task.patient.name}</p>
+        </div>
+
         <p>
-          <strong>Assigned to:</strong>{" "}
+          <strong className="text-white">Assigned to:</strong>{" "}
           {task.assignedMember?.user.name || "Sin asignar"}
         </p>
         {renderQuickActions(task)}
@@ -124,10 +138,10 @@ export function TaskList({ tasks }: TaskListProps) {
     return (
       <section
         key={status}
-        className={`rounded border p-4 transition ${
+        className={`rounded-2xl border p-4 transition md:p-5 ${
           isActiveDropTarget
-            ? "border-white bg-white/10"
-            : "border-white/20 bg-white/5"
+            ? "border-white/40 bg-white/10"
+            : "border-white/15 bg-white/5"
         }`}
         onDragOver={(event) => {
           event.preventDefault();
@@ -153,9 +167,14 @@ export function TaskList({ tasks }: TaskListProps) {
           handleStatusChange(taskId, status);
         }}
       >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{TASK_STATUS_LABELS[status]}</h3>
-          <span className="rounded border border-white/20 px-2 py-1 text-xs">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">{TASK_STATUS_LABELS[status]}</h3>
+            <p className="text-xs text-white/55">Tasks in this stage</p>
+          </div>
+          <span
+            className={`rounded-full border px-3 py-1 text-xs font-semibold ${TASK_STATUS_BADGE_CLASSES[status]}`}
+          >
             {columnTasks.length}
           </span>
         </div>
@@ -177,16 +196,21 @@ export function TaskList({ tasks }: TaskListProps) {
 
   return (
     <div className="mt-4 space-y-6">
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {TASK_BOARD_STATUSES.map(renderColumn)}
       </div>
 
-      <section className="rounded border border-white/20 bg-white/5 p-4">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">
-            {TASK_STATUS_LABELS.DISCARDED}
-          </h3>
-          <span className="rounded border border-white/20 px-2 py-1 text-xs">
+      <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">
+              {TASK_STATUS_LABELS.DISCARDED}
+            </h3>
+            <p className="text-xs text-white/55">Hidden from the main board</p>
+          </div>
+          <span
+            className={`rounded-full border px-3 py-1 text-xs font-semibold ${TASK_STATUS_BADGE_CLASSES.DISCARDED}`}
+          >
             {tasksByStatus.DISCARDED.length}
           </span>
         </div>
