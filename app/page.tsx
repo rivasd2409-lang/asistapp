@@ -1,5 +1,9 @@
 import { prisma } from "@/lib/db";
 
+import {
+  isTaskCustomRecurrenceUnit,
+  normalizeTaskRecurrenceType,
+} from "./task-recurrence";
 import { TaskList } from "./task-list";
 import { normalizeTaskStatus } from "./task-status";
 
@@ -92,15 +96,40 @@ async function createTask(formData: FormData) {
 
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
+  const dueDate = formData.get("dueDate") as string;
+  const recurrenceType = normalizeTaskRecurrenceType(
+    (formData.get("recurrenceType") as string) || "NONE"
+  );
+  const recurrenceIntervalValue = formData.get("recurrenceInterval") as string;
+  const recurrenceUnitValue = (formData.get("recurrenceUnit") as string) || "";
   const patientId = formData.get("patientId") as string;
   const assignedMemberId = formData.get("assignedMemberId") as string;
 
   if (!title || !patientId) return;
 
+  const parsedRecurrenceInterval = recurrenceIntervalValue
+    ? Number.parseInt(recurrenceIntervalValue, 10)
+    : null;
+  const recurrenceInterval =
+    recurrenceType === "CUSTOM" &&
+    parsedRecurrenceInterval &&
+    parsedRecurrenceInterval > 0
+      ? parsedRecurrenceInterval
+      : null;
+  const recurrenceUnit =
+    recurrenceType === "CUSTOM" &&
+    isTaskCustomRecurrenceUnit(recurrenceUnitValue)
+      ? recurrenceUnitValue
+      : null;
+
   await prisma.task.create({
     data: {
       title,
       description: description || null,
+      dueDate: dueDate ? new Date(dueDate) : null,
+      recurrenceType,
+      recurrenceInterval,
+      recurrenceUnit,
       patientId,
       assignedMemberId: assignedMemberId || null,
       status: "PENDING",
@@ -147,6 +176,9 @@ export default async function Home() {
 
   const normalizedTasks = tasks.map((task) => ({
     ...task,
+    dueDate: task.dueDate?.toISOString() ?? null,
+    createdAt: task.createdAt.toISOString(),
+    recurrenceType: normalizeTaskRecurrenceType(task.recurrenceType),
     status: normalizeTaskStatus(task.status),
   }));
 
@@ -339,6 +371,54 @@ export default async function Home() {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block">Fecha y hora limite</label>
+            <input
+              name="dueDate"
+              type="datetime-local"
+              className="w-full rounded border border-white/20 bg-black px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block">Recurrencia</label>
+            <select
+              name="recurrenceType"
+              className="w-full rounded border border-white/20 bg-black px-3 py-2"
+              defaultValue="NONE"
+            >
+              <option value="NONE">NONE</option>
+              <option value="DAILY">DAILY</option>
+              <option value="WEEKLY">WEEKLY</option>
+              <option value="CUSTOM">CUSTOM</option>
+            </select>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block">Custom interval</label>
+              <input
+                name="recurrenceInterval"
+                type="number"
+                min="1"
+                placeholder="Ej: 2"
+                className="w-full rounded border border-white/20 bg-black px-3 py-2"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block">Custom unit</label>
+              <select
+                name="recurrenceUnit"
+                className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                defaultValue="DAYS"
+              >
+                <option value="DAYS">Every X days</option>
+                <option value="HOURS">Every X hours</option>
+              </select>
+            </div>
           </div>
 
           <div>

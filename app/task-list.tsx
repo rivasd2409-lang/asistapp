@@ -3,6 +3,10 @@
 import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import {
+  formatTaskRecurrence,
+  type TaskRecurrenceType,
+} from "./task-recurrence";
 import { updateTaskStatus } from "./task-actions";
 import {
   TASK_BOARD_STATUSES,
@@ -17,7 +21,13 @@ type TaskListItem = {
   title: string;
   description: string | null;
   status: TaskStatus;
+  dueDate: string | null;
+  createdAt: string;
+  recurrenceType: TaskRecurrenceType;
+  recurrenceInterval: number | null;
+  recurrenceUnit: string | null;
   patient: {
+    id: string;
     name: string;
   };
   assignedMember: {
@@ -31,9 +41,41 @@ type TaskListProps = {
   tasks: TaskListItem[];
 };
 
+function getDueDateTimestamp(dueDate: string | null) {
+  if (!dueDate) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return new Date(dueDate).getTime();
+}
+
+function formatDueDate(dueDate: string | null) {
+  if (!dueDate) {
+    return "No due date";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(dueDate));
+}
+
+function isTaskOverdue(task: TaskListItem) {
+  if (!task.dueDate) {
+    return false;
+  }
+
+  if (task.status === "COMPLETED" || task.status === "DISCARDED") {
+    return false;
+  }
+
+  return new Date(task.dueDate).getTime() < Date.now();
+}
+
 export function TaskList({ tasks }: TaskListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [selectedPatientId, setSelectedPatientId] = useState("ALL");
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dropTargetStatus, setDropTargetStatus] = useState<TaskStatus | null>(
     null
@@ -59,13 +101,41 @@ export function TaskList({ tasks }: TaskListProps) {
     });
   }
 
+  const patientOptions = optimisticTasks.reduce<
+    Array<{ id: string; name: string }>
+  >((patients, task) => {
+    if (patients.some((patient) => patient.id === task.patient.id)) {
+      return patients;
+    }
+
+    return [...patients, task.patient];
+  }, []);
+
+  const visibleTasks =
+    selectedPatientId === "ALL"
+      ? optimisticTasks
+      : optimisticTasks.filter((task) => task.patient.id === selectedPatientId);
+
+  const sortedVisibleTasks = [...visibleTasks].sort((left, right) => {
+    const dueDateDifference =
+      getDueDateTimestamp(left.dueDate) - getDueDateTimestamp(right.dueDate);
+
+    if (dueDateDifference !== 0) {
+      return dueDateDifference;
+    }
+
+    return (
+      new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
+    );
+  });
+
   const tasksByStatus = {
-    PENDING: optimisticTasks.filter((task) => task.status === "PENDING"),
-    IN_PROGRESS: optimisticTasks.filter(
+    PENDING: sortedVisibleTasks.filter((task) => task.status === "PENDING"),
+    IN_PROGRESS: sortedVisibleTasks.filter(
       (task) => task.status === "IN_PROGRESS"
     ),
-    COMPLETED: optimisticTasks.filter((task) => task.status === "COMPLETED"),
-    DISCARDED: optimisticTasks.filter((task) => task.status === "DISCARDED"),
+    COMPLETED: sortedVisibleTasks.filter((task) => task.status === "COMPLETED"),
+    DISCARDED: sortedVisibleTasks.filter((task) => task.status === "DISCARDED"),
   };
 
   function renderQuickActions(task: TaskListItem) {
@@ -91,10 +161,21 @@ export function TaskList({ tasks }: TaskListProps) {
   }
 
   function renderTaskCard(task: TaskListItem) {
+    const overdue = isTaskOverdue(task);
+    const recurrenceLabel = formatTaskRecurrence({
+      recurrenceType: task.recurrenceType,
+      recurrenceInterval: task.recurrenceInterval,
+      recurrenceUnit: task.recurrenceUnit,
+    });
+
     return (
       <article
         key={task.id}
-        className="rounded-xl border border-white/15 bg-black/40 p-4 shadow-sm"
+        className={`rounded-xl border bg-black/40 p-4 shadow-sm ${
+          overdue
+            ? "border-red-400/50 ring-1 ring-red-400/30"
+            : "border-white/15"
+        }`}
         draggable={!isPending}
         onDragStart={(event) => {
           setDraggedTaskId(task.id);
@@ -118,11 +199,28 @@ export function TaskList({ tasks }: TaskListProps) {
         </div>
 
         <div className="space-y-2 text-sm text-white/80">
-          <p><strong className="text-white">Description:</strong> {task.description || "-"}</p>
-          <p><strong className="text-white">Patient:</strong> {task.patient.name}</p>
+          <p>
+            <strong className="text-white">Description:</strong>{" "}
+            {task.description || "-"}
+          </p>
+          <p>
+            <strong className="text-white">Patient:</strong> {task.patient.name}
+          </p>
+          <p className={overdue ? "text-red-200" : ""}>
+            <strong className="text-white">Due:</strong> {formatDueDate(task.dueDate)}
+          </p>
+          <p>
+            <strong className="text-white">Recurrence:</strong> {recurrenceLabel}
+          </p>
         </div>
 
-        <p>
+        {overdue ? (
+          <p className="mt-3 rounded border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs font-medium text-red-200">
+            Overdue task
+          </p>
+        ) : null}
+
+        <p className="mt-3 text-sm text-white/80">
           <strong className="text-white">Assigned to:</strong>{" "}
           {task.assignedMember?.user.name || "Sin asignar"}
         </p>
@@ -196,6 +294,35 @@ export function TaskList({ tasks }: TaskListProps) {
 
   return (
     <div className="mt-4 space-y-6">
+      <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-white">Filter by patient</h3>
+            <p className="text-xs text-white/55">
+              Show tasks for one patient or view the full board
+            </p>
+          </div>
+
+          <div className="w-full sm:max-w-xs">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+              Patient
+            </label>
+            <select
+              className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
+              value={selectedPatientId}
+              onChange={(event) => setSelectedPatientId(event.target.value)}
+            >
+              <option value="ALL">All patients</option>
+              {patientOptions.map((patient) => (
+                <option key={patient.id} value={patient.id}>
+                  {patient.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {TASK_BOARD_STATUSES.map(renderColumn)}
       </div>

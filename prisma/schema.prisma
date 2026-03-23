@@ -53,10 +53,16 @@ model Task {
   title            String
   description      String?
   status           String      @default("PENDING")
+  dueDate          DateTime?
+  recurrenceType   String      @default("NONE")
+  recurrenceInterval Int?
+  recurrenceUnit   String?
+  completedAt      DateTime?
+  nextOccurrenceTaskId String?
   patientId        String
   assignedMemberId String?
   createdAt        DateTime    @default(now())
 
-  patient          Patient     @relation(fields: [patientId], references: [id])
-  assignedMember    GroupMember? @relation(fields: [assignedMemberId], references: [id])
+  patient          Patient      @relation(fields: [patientId], references: [id])
+  assignedMember   GroupMember? @relation(fields: [assignedMemberId], references: [id])
 }
