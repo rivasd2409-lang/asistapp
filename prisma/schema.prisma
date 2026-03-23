@@ -53,6 +53,10 @@ model Task {
   title            String
   description      String?
   status           String      @default("PENDING")
+  category         String      @default("GENERAL")
+  medicationName   String?
+  dosage           String?
+  instructions     String?
   dueDate          DateTime?
   recurrenceType   String      @default("NONE")
   recurrenceInterval Int?

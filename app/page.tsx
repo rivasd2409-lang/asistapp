@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 
+import { normalizeTaskCategory } from "./task-category";
+import { TaskCreateForm } from "./task-create-form";
 import {
   isTaskCustomRecurrenceUnit,
   normalizeTaskRecurrenceType,
@@ -96,6 +98,12 @@ async function createTask(formData: FormData) {
 
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
+  const category = normalizeTaskCategory(
+    (formData.get("category") as string) || "GENERAL"
+  );
+  const medicationName = formData.get("medicationName") as string;
+  const dosage = formData.get("dosage") as string;
+  const instructions = formData.get("instructions") as string;
   const dueDate = formData.get("dueDate") as string;
   const recurrenceType = normalizeTaskRecurrenceType(
     (formData.get("recurrenceType") as string) || "NONE"
@@ -126,6 +134,10 @@ async function createTask(formData: FormData) {
     data: {
       title,
       description: description || null,
+      category,
+      medicationName: category === "MEDICATION" ? medicationName || null : null,
+      dosage: category === "MEDICATION" ? dosage || null : null,
+      instructions: category === "MEDICATION" ? instructions || null : null,
       dueDate: dueDate ? new Date(dueDate) : null,
       recurrenceType,
       recurrenceInterval,
@@ -178,6 +190,7 @@ export default async function Home() {
     ...task,
     dueDate: task.dueDate?.toISOString() ?? null,
     createdAt: task.createdAt.toISOString(),
+    category: normalizeTaskCategory(task.category),
     recurrenceType: normalizeTaskRecurrenceType(task.recurrenceType),
     status: normalizeTaskStatus(task.status),
   }));
@@ -185,7 +198,7 @@ export default async function Home() {
   return (
     <main className="p-6 space-y-8">
       <section>
-        <h1 className="text-2xl font-bold">Asistapp 🚀</h1>
+        <h1 className="text-2xl font-bold">Asistapp ðŸš€</h1>
         <p className="mt-4">Usuarios en base de datos: {users.length}</p>
 
         <form action={createUser} className="mt-4">
@@ -335,115 +348,11 @@ export default async function Home() {
           Tareas: {tasks.length}
         </p>
 
-        <form action={createTask} className="space-y-3">
-          <div>
-            <label className="mb-1 block">Título</label>
-            <input
-              name="title"
-              type="text"
-              placeholder="Ej: Dar medicamento de la mañana"
-              className="w-full rounded border border-white/20 bg-black px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block">Descripción</label>
-            <textarea
-              name="description"
-              placeholder="Detalles de la tarea"
-              className="w-full rounded border border-white/20 bg-black px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block">Paciente</label>
-            <select
-              name="patientId"
-              className="w-full rounded border border-white/20 bg-black px-3 py-2"
-              defaultValue=""
-            >
-              <option value="" disabled>
-                Selecciona un paciente
-              </option>
-              {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block">Fecha y hora limite</label>
-            <input
-              name="dueDate"
-              type="datetime-local"
-              className="w-full rounded border border-white/20 bg-black px-3 py-2"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block">Recurrencia</label>
-            <select
-              name="recurrenceType"
-              className="w-full rounded border border-white/20 bg-black px-3 py-2"
-              defaultValue="NONE"
-            >
-              <option value="NONE">NONE</option>
-              <option value="DAILY">DAILY</option>
-              <option value="WEEKLY">WEEKLY</option>
-              <option value="CUSTOM">CUSTOM</option>
-            </select>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block">Custom interval</label>
-              <input
-                name="recurrenceInterval"
-                type="number"
-                min="1"
-                placeholder="Ej: 2"
-                className="w-full rounded border border-white/20 bg-black px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block">Custom unit</label>
-              <select
-                name="recurrenceUnit"
-                className="w-full rounded border border-white/20 bg-black px-3 py-2"
-                defaultValue="DAYS"
-              >
-                <option value="DAYS">Every X days</option>
-                <option value="HOURS">Every X hours</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-1 block">Asignar a miembro del grupo</label>
-            <select
-              name="assignedMemberId"
-              className="w-full rounded border border-white/20 bg-black px-3 py-2"
-              defaultValue=""
-            >
-              <option value="">Sin asignar</option>
-              {members.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.user.name} - {member.role}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            className="rounded bg-white px-4 py-2 text-black"
-          >
-            Crear tarea
-          </button>
-        </form>
+        <TaskCreateForm
+          action={createTask}
+          patients={patients}
+          members={members}
+        />
 
         <TaskList tasks={normalizedTasks} />
       </section>

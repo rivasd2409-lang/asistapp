@@ -8,6 +8,7 @@ import {
   getNextOccurrenceDueDate,
   normalizeTaskRecurrenceType,
 } from "./task-recurrence";
+import { normalizeTaskCategory } from "./task-category";
 import { isTaskStatus, type TaskStatus } from "./task-status";
 
 export async function updateTaskStatus(taskId: string, status: TaskStatus) {
@@ -27,6 +28,7 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
     const recurrenceType = normalizeTaskRecurrenceType(
       currentTask.recurrenceType
     );
+    const category = normalizeTaskCategory(currentTask.category);
     const now = new Date();
 
     const updatedTask = await tx.task.update({
@@ -59,6 +61,10 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
         title: currentTask.title,
         description: currentTask.description,
         status: "PENDING",
+        category,
+        medicationName: currentTask.medicationName,
+        dosage: currentTask.dosage,
+        instructions: currentTask.instructions,
         dueDate: nextDueDate,
         recurrenceType: currentTask.recurrenceType,
         recurrenceInterval: currentTask.recurrenceInterval,

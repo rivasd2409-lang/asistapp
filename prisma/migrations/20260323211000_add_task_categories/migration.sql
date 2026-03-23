@@ -1,0 +1,5 @@
+ALTER TABLE "Task"
+ADD COLUMN "category" TEXT NOT NULL DEFAULT 'GENERAL',
+ADD COLUMN "medicationName" TEXT,
+ADD COLUMN "dosage" TEXT,
+ADD COLUMN "instructions" TEXT;

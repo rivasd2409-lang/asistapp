@@ -4,6 +4,11 @@ import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
+  TASK_CATEGORY_BADGE_CLASSES,
+  TASK_CATEGORY_LABELS,
+  type TaskCategory,
+} from "./task-category";
+import {
   formatTaskRecurrence,
   type TaskRecurrenceType,
 } from "./task-recurrence";
@@ -20,6 +25,10 @@ type TaskListItem = {
   id: string;
   title: string;
   description: string | null;
+  category: TaskCategory;
+  medicationName: string | null;
+  dosage: string | null;
+  instructions: string | null;
   status: TaskStatus;
   dueDate: string | null;
   createdAt: string;
@@ -188,14 +197,23 @@ export function TaskList({ tasks }: TaskListProps) {
         }}
       >
         <div className="mb-3 flex items-start justify-between gap-3">
-          <h4 className="text-sm font-semibold leading-5 text-white">
-            {task.title}
-          </h4>
-          <span
-            className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${TASK_STATUS_BADGE_CLASSES[task.status]}`}
-          >
-            {TASK_STATUS_LABELS[task.status]}
-          </span>
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${TASK_CATEGORY_BADGE_CLASSES[task.category]}`}
+              >
+                {TASK_CATEGORY_LABELS[task.category]}
+              </span>
+              <span
+                className={`rounded-full border px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${TASK_STATUS_BADGE_CLASSES[task.status]}`}
+              >
+                {TASK_STATUS_LABELS[task.status]}
+              </span>
+            </div>
+            <h4 className="text-sm font-semibold leading-5 text-white">
+              {task.title}
+            </h4>
+          </div>
         </div>
 
         <div className="space-y-2 text-sm text-white/80">
@@ -212,6 +230,22 @@ export function TaskList({ tasks }: TaskListProps) {
           <p>
             <strong className="text-white">Recurrence:</strong> {recurrenceLabel}
           </p>
+          {task.category === "MEDICATION" ? (
+            <>
+              <p>
+                <strong className="text-white">Medication:</strong>{" "}
+                {task.medicationName || "-"}
+              </p>
+              <p>
+                <strong className="text-white">Dosage:</strong>{" "}
+                {task.dosage || "-"}
+              </p>
+              <p>
+                <strong className="text-white">Instructions:</strong>{" "}
+                {task.instructions || "-"}
+              </p>
+            </>
+          ) : null}
         </div>
 
         {overdue ? (
