@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  role         String
+  createdAt    DateTime      @default(now())
+  groupMembers GroupMember[]
+}
+
+model Group {
+  id        String        @id @default(uuid())
+  name      String
+  createdAt DateTime      @default(now())
+  members   GroupMember[]
+  patients  Patient[]
+}
+
+model GroupMember {
+  id      String @id @default(uuid())
+  userId  String
+  groupId String
+  role    String
+
+  user  User  @relation(fields: [userId], references: [id])
+  group Group @relation(fields: [groupId], references: [id])
+
+  tasks Task[]
+}
+
+model Patient {
+  id        String   @id @default(uuid())
+  name      String
+  age       Int
+  groupId   String
+  createdAt DateTime @default(now())
+
+  group Group @relation(fields: [groupId], references: [id])
+
+  tasks Task[]
+}
+
+model Task {
+  id               String      @id @default(uuid())
+  title            String
+  description      String?
+  status           String      @default("PENDING")
+  patientId        String
+  assignedMemberId String?
+  createdAt        DateTime    @default(now())
+
+  patient          Patient     @relation(fields: [patientId], references: [id])
+  assignedMember    GroupMember? @relation(fields: [assignedMemberId], references: [id])
+}
