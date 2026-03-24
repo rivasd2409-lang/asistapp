@@ -12,6 +12,7 @@ import {
   TASK_CATEGORY_LABELS,
   type TaskCategory,
 } from "./task-category";
+import { APP_ROLE_LABELS, normalizeAppRole } from "@/lib/roles";
 
 type PatientOption = {
   id: string;
@@ -80,7 +81,7 @@ export function TaskCreateForm({
       {category === "MEDICATION" ? (
         <div className="grid gap-3 rounded border border-white/10 bg-white/5 p-3 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <label className="mb-1 block">Medication name</label>
+            <label className="mb-1 block">Nombre del medicamento</label>
             <input
               name="medicationName"
               type="text"
@@ -90,7 +91,7 @@ export function TaskCreateForm({
           </div>
 
           <div>
-            <label className="mb-1 block">Dose amount</label>
+            <label className="mb-1 block">Cantidad de dosis</label>
             <input
               name="doseAmount"
               type="number"
@@ -102,7 +103,7 @@ export function TaskCreateForm({
           </div>
 
           <div>
-            <label className="mb-1 block">Dose unit</label>
+            <label className="mb-1 block">Unidad de dosis</label>
             <select
               name="doseUnit"
               className="w-full rounded border border-white/20 bg-black px-3 py-2"
@@ -118,11 +119,11 @@ export function TaskCreateForm({
           </div>
 
           <div className="sm:col-span-2">
-            <label className="mb-1 block">Instructions</label>
+            <label className="mb-1 block">Instrucciones</label>
             <input
               name="instructions"
               type="text"
-              placeholder="Ej: After breakfast"
+              placeholder="Ej: Después del desayuno"
               className="w-full rounded border border-white/20 bg-black px-3 py-2"
             />
           </div>
@@ -163,16 +164,16 @@ export function TaskCreateForm({
           className="w-full rounded border border-white/20 bg-black px-3 py-2"
           defaultValue="NONE"
         >
-          <option value="NONE">NONE</option>
-          <option value="DAILY">DAILY</option>
-          <option value="WEEKLY">WEEKLY</option>
-          <option value="CUSTOM">CUSTOM</option>
+          <option value="NONE">Una vez</option>
+          <option value="DAILY">Diaria</option>
+          <option value="WEEKLY">Semanal</option>
+          <option value="CUSTOM">Personalizada</option>
         </select>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block">Custom interval</label>
+          <label className="mb-1 block">Intervalo personalizado</label>
           <input
             name="recurrenceInterval"
             type="number"
@@ -183,14 +184,14 @@ export function TaskCreateForm({
         </div>
 
         <div>
-          <label className="mb-1 block">Custom unit</label>
+          <label className="mb-1 block">Unidad personalizada</label>
           <select
             name="recurrenceUnit"
             className="w-full rounded border border-white/20 bg-black px-3 py-2"
             defaultValue="DAYS"
           >
-            <option value="DAYS">Every X days</option>
-            <option value="HOURS">Every X hours</option>
+            <option value="DAYS">Cada X días</option>
+            <option value="HOURS">Cada X horas</option>
           </select>
         </div>
       </div>
@@ -205,7 +206,7 @@ export function TaskCreateForm({
           <option value="">Sin asignar</option>
           {members.map((member) => (
             <option key={member.id} value={member.id}>
-              {member.user.name} - {member.role}
+              {member.user.name} - {APP_ROLE_LABELS[normalizeAppRole(member.role)]}
             </option>
           ))}
         </select>

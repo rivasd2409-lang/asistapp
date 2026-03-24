@@ -36,15 +36,15 @@ export function formatTaskRecurrence(options: {
   recurrenceUnit: string | null;
 }) {
   if (options.recurrenceType === "NONE") {
-    return "One-time";
+    return "Una vez";
   }
 
   if (options.recurrenceType === "DAILY") {
-    return "Daily";
+    return "Diaria";
   }
 
   if (options.recurrenceType === "WEEKLY") {
-    return "Weekly";
+    return "Semanal";
   }
 
   if (
@@ -54,13 +54,13 @@ export function formatTaskRecurrence(options: {
     options.recurrenceUnit &&
     isTaskCustomRecurrenceUnit(options.recurrenceUnit)
   ) {
-    const unit = options.recurrenceUnit === "DAYS" ? "day" : "hour";
+    const unit = options.recurrenceUnit === "DAYS" ? "día" : "hora";
     const plural = options.recurrenceInterval === 1 ? unit : `${unit}s`;
 
-    return `Every ${options.recurrenceInterval} ${plural}`;
+    return `Cada ${options.recurrenceInterval} ${plural}`;
   }
 
-  return "Custom schedule";
+  return "Personalizada";
 }
 
 export function getNextOccurrenceDueDate(options: {

@@ -1,27 +1,48 @@
 import { prisma } from "@/lib/db";
 
-import { formatMedicationDose, normalizeMedicationUnit } from "@/app/medication-units";
+import { getCurrentUser } from "@/lib/auth";
+import { normalizeMedicationUnit } from "@/app/medication-units";
 import { normalizeTaskCategory } from "@/app/task-category";
 import { normalizeTaskRecurrenceType } from "@/app/task-recurrence";
 import { normalizeTaskStatus } from "@/app/task-status";
+import { normalizeVitalSignType } from "@/app/vital-signs";
+import { buildAttentionAlerts, buildNotificationItems } from "./attention";
+import { hasPermission, isAssignedCareRole } from "./roles";
 
 export async function getAppData() {
+  const currentUser = await getCurrentUser();
   const now = new Date();
   const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const next2Hours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+  const isAssignedOnlyScope = currentUser
+    ? isAssignedCareRole(currentUser.role)
+    : false;
+  const canManageFamilyWorkspace = hasPermission(
+    currentUser?.role || "",
+    "manage_family_workspace"
+  );
 
-  const [users, groups, patients, members, tasks, inventoryItems] =
+  const [users, groups, patients, members, tasks, inventoryItems, vitalSigns] =
     await Promise.all([
-      prisma.user.findMany({
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.group.findMany({
-        orderBy: { createdAt: "desc" },
-      }),
+      canManageFamilyWorkspace
+        ? prisma.user.findMany({
+            orderBy: { createdAt: "desc" },
+          })
+        : Promise.resolve([]),
+      canManageFamilyWorkspace
+        ? prisma.group.findMany({
+            orderBy: { createdAt: "desc" },
+          })
+        : Promise.resolve([]),
       prisma.patient.findMany({
         orderBy: { createdAt: "desc" },
       }),
       prisma.groupMember.findMany({
+        where: {
+          user: {
+            isActive: true,
+          },
+        },
         include: {
           user: true,
           group: true,
@@ -31,6 +52,14 @@ export async function getAppData() {
         },
       }),
       prisma.task.findMany({
+        where:
+          isAssignedOnlyScope && currentUser
+            ? {
+                assignedMember: {
+                  userId: currentUser.id,
+                },
+              }
+            : undefined,
         include: {
           patient: true,
           assignedMember: {
@@ -51,11 +80,20 @@ export async function getAppData() {
           createdAt: "desc",
         },
       }),
+      prisma.vitalSign.findMany({
+        include: {
+          patient: true,
+        },
+        orderBy: {
+          recordedAt: "desc",
+        },
+      }),
     ]);
 
   const normalizedTasks = tasks.map((task) => ({
     ...task,
     dueDate: task.dueDate?.toISOString() ?? null,
+    completedAt: task.completedAt?.toISOString() ?? null,
     createdAt: task.createdAt.toISOString(),
     category: normalizeTaskCategory(task.category),
     recurrenceType: normalizeTaskRecurrenceType(task.recurrenceType),
@@ -66,6 +104,13 @@ export async function getAppData() {
   const normalizedInventoryItems = inventoryItems.map((item) => ({
     ...item,
     displayUnit: normalizeMedicationUnit(item.unit) ?? "TABLET",
+  }));
+
+  const normalizedVitalSigns = vitalSigns.map((record) => ({
+    ...record,
+    type: normalizeVitalSignType(record.type),
+    recordedAt: record.recordedAt.toISOString(),
+    createdAt: record.createdAt.toISOString(),
   }));
 
   const normalizedTasksWithInventory = normalizedTasks.map((task) => {
@@ -94,101 +139,54 @@ export async function getAppData() {
     };
   });
 
-  const attentionAlerts = [
-    ...normalizedInventoryItems
-      .filter((item) => item.currentStock <= item.minimumStock)
-      .map((item) => ({
-        id: `inventory-${item.id}`,
-        tone: "danger" as const,
-        sortKey: 1,
-        timestamp: 0,
-        message: `${item.medicationName} tiene bajo stock (${formatMedicationDose(
-          item.currentStock,
-          item.displayUnit
-        )})`,
-      })),
-    ...normalizedTasksWithInventory
-      .filter((task) => {
-        if (!task.dueDate) return false;
-        if (task.status === "COMPLETED" || task.status === "DISCARDED") {
-          return false;
-        }
+  const visiblePatientIds = new Set(
+    normalizedTasksWithInventory.map((task) => task.patientId)
+  );
+  const filteredPatients = isAssignedOnlyScope
+    ? patients.filter((patient) => visiblePatientIds.has(patient.id))
+    : patients;
+  const filteredInventoryItems = isAssignedOnlyScope
+    ? normalizedInventoryItems.filter((item) => visiblePatientIds.has(item.patientId))
+    : normalizedInventoryItems;
+  const filteredVitalSigns = isAssignedOnlyScope
+    ? normalizedVitalSigns.filter((record) => visiblePatientIds.has(record.patientId))
+    : normalizedVitalSigns;
+  const filteredMembers = canManageFamilyWorkspace
+    ? members
+    : members.filter((member) => member.userId === currentUser?.id);
 
-        const dueDate = new Date(task.dueDate);
-
-        return dueDate >= now && dueDate <= next24Hours;
-      })
-      .map((task) => ({
-        id: `task-${task.id}`,
-        tone: "warning" as const,
-        sortKey: 2,
-        timestamp: new Date(task.dueDate as string).getTime(),
-        message: `${task.title} - próxima dosis ${new Intl.DateTimeFormat(
-          "es-HN",
-          {
-            dateStyle: "medium",
-            timeStyle: "short",
-          }
-        ).format(new Date(task.dueDate as string))}`,
-      })),
-  ].sort((left, right) => {
-    if (left.sortKey !== right.sortKey) {
-      return left.sortKey - right.sortKey;
-    }
-
-    return left.timestamp - right.timestamp;
+  const attentionAlerts = buildAttentionAlerts({
+    now,
+    upcomingHours: (next24Hours.getTime() - now.getTime()) / (60 * 60 * 1000),
+    tasks: normalizedTasksWithInventory,
+    inventoryItems: filteredInventoryItems,
   });
 
-  const notificationItems = [
-    ...normalizedInventoryItems
-      .filter((item) => item.currentStock <= item.minimumStock)
-      .map((item) => ({
-        id: `low-stock-${item.id}`,
-        kind: "low_stock" as const,
-        message: `${item.medicationName} tiene bajo stock (${formatMedicationDose(
-          item.currentStock,
-          item.displayUnit
-        )})`,
-      })),
-    ...normalizedTasksWithInventory
-      .filter((task) => {
-        if (!task.dueDate) return false;
-        if (task.status === "COMPLETED" || task.status === "DISCARDED") {
-          return false;
-        }
-
-        const dueDate = new Date(task.dueDate);
-
-        return dueDate >= now && dueDate <= next2Hours;
-      })
-      .map((task) => ({
-        id: `task-due-${task.id}`,
-        kind: "task_due_soon" as const,
-        message: `Hora de dar ${task.title} a ${task.patient.name} (${new Intl.DateTimeFormat(
-          "en-US",
-          {
-            hour: "numeric",
-            minute: "2-digit",
-          }
-        ).format(new Date(task.dueDate as string))})`,
-      })),
-  ];
+  const notificationItems = buildNotificationItems({
+    now,
+    upcomingHours: (next2Hours.getTime() - now.getTime()) / (60 * 60 * 1000),
+    tasks: normalizedTasksWithInventory,
+    inventoryItems: filteredInventoryItems,
+  });
 
   return {
     users,
     groups,
-    patients,
-    members,
+    patients: filteredPatients,
+    members: filteredMembers,
     tasks: normalizedTasksWithInventory,
-    inventoryItems: normalizedInventoryItems,
+    inventoryItems: filteredInventoryItems,
+    vitalSigns: filteredVitalSigns,
     attentionAlerts,
     notificationItems,
+    viewer: currentUser,
     summary: {
       users: users.length,
       groups: groups.length,
-      patients: patients.length,
+      patients: filteredPatients.length,
       tasks: normalizedTasksWithInventory.length,
-      inventoryItems: normalizedInventoryItems.length,
+      inventoryItems: filteredInventoryItems.length,
+      vitalSigns: filteredVitalSigns.length,
     },
   };
 }

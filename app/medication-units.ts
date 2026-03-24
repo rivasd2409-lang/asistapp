@@ -16,10 +16,10 @@ export function normalizeMedicationUnit(value: string): MedicationUnit | null {
 }
 
 export const MEDICATION_UNIT_LABELS: Record<MedicationUnit, string> = {
-  TABLET: "tablet",
-  CAPSULE: "capsule",
+  TABLET: "tableta",
+  CAPSULE: "cápsula",
   ML: "ml",
-  DROP: "drop",
+  DROP: "gota",
 };
 
 export function formatMedicationDose(

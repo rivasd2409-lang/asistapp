@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { type MedicationInventoryFormState } from "./medication-inventory-form-state";
 import {
   MEDICATION_UNITS,
   MEDICATION_UNIT_LABELS,
@@ -10,18 +11,6 @@ import {
 type PatientOption = {
   id: string;
   name: string;
-};
-
-export type MedicationInventoryFormState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  errors: {
-    medicationName?: string;
-    unit?: string;
-    currentStock?: string;
-    minimumStock?: string;
-    patientId?: string;
-  };
 };
 
 type MedicationInventoryFormProps = {

@@ -3,6 +3,8 @@
 import { refresh } from "next/cache";
 
 import { prisma } from "@/lib/db";
+import { requireCurrentUser } from "@/lib/auth";
+import { hasPermission, isAssignedCareRole } from "@/lib/roles";
 
 import { normalizeMedicationUnit } from "./medication-units";
 import {
@@ -12,7 +14,22 @@ import {
 import { normalizeTaskCategory } from "./task-category";
 import { isTaskStatus, type TaskStatus } from "./task-status";
 
-export async function updateTaskStatus(taskId: string, status: TaskStatus) {
+type TaskStatusUpdateOptions = {
+  administeredByMemberId?: string | null;
+  recordedByMemberId?: string | null;
+};
+
+export async function updateTaskStatus(
+  taskId: string,
+  status: TaskStatus,
+  options?: TaskStatusUpdateOptions
+) {
+  const currentUser = await requireCurrentUser();
+
+  if (!hasPermission(currentUser.role, "update_task_status")) {
+    throw new Error("No autorizado para actualizar tareas.");
+  }
+
   if (!taskId || !isTaskStatus(status)) {
     throw new Error("Invalid task status update.");
   }
@@ -20,10 +37,20 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
   await prisma.$transaction(async (tx) => {
     const currentTask = await tx.task.findUnique({
       where: { id: taskId },
+      include: {
+        assignedMember: true,
+      },
     });
 
     if (!currentTask) {
       throw new Error("Task not found.");
+    }
+
+    if (
+      isAssignedCareRole(currentUser.role) &&
+      currentTask.assignedMember?.userId !== currentUser.id
+    ) {
+      throw new Error("No autorizado para esta tarea.");
     }
 
     const recurrenceType = normalizeTaskRecurrenceType(
@@ -46,11 +73,33 @@ export async function updateTaskStatus(taskId: string, status: TaskStatus) {
       recurrenceType !== "NONE" &&
       !currentTask.nextOccurrenceTaskId;
 
+    const shouldCreateMedicationAdministration =
+      status === "COMPLETED" &&
+      currentTask.status !== "COMPLETED" &&
+      category === "MEDICATION" &&
+      !!currentTask.medicationName;
+
     const shouldDecrementInventory =
       status === "COMPLETED" &&
       currentTask.status !== "COMPLETED" &&
       category === "MEDICATION" &&
       !!currentTask.medicationName;
+
+    if (shouldCreateMedicationAdministration) {
+      await tx.medicationAdministration.create({
+        data: {
+          taskId: currentTask.id,
+          patientId: currentTask.patientId,
+          medicationName: currentTask.medicationName as string,
+          dosage: currentTask.dosage,
+          instructions: currentTask.instructions,
+          administeredAt: now,
+          administeredByMemberId: options?.administeredByMemberId || null,
+          recordedByMemberId: options?.recordedByMemberId || null,
+          notes: null,
+        },
+      });
+    }
 
     if (shouldDecrementInventory) {
       const medicationName = currentTask.medicationName;

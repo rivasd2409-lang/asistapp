@@ -11,9 +11,14 @@ model User {
   id           String        @id @default(uuid())
   name         String
   email        String        @unique
+  passwordHash String?
   role         String
+  isActive     Boolean       @default(true)
   createdAt    DateTime      @default(now())
   groupMembers GroupMember[]
+  sessions     Session[]
+  plannedShifts   PlannedShift[]
+  shiftAttendances ShiftAttendance[]
 }
 
 model Group {
@@ -34,6 +39,8 @@ model GroupMember {
   group Group @relation(fields: [groupId], references: [id])
 
   tasks Task[]
+  medicationAdministrations MedicationAdministration[]
+  recordedMedicationAdministrations MedicationAdministration[] @relation("MedicationAdministrationRecordedBy")
 }
 
 model Patient {
@@ -47,6 +54,8 @@ model Patient {
 
   tasks               Task[]
   medicationInventory MedicationInventory[]
+  vitalSigns          VitalSign[]
+  medicationAdministrations MedicationAdministration[]
 }
 
 model Task {
@@ -72,6 +81,7 @@ model Task {
 
   patient          Patient      @relation(fields: [patientId], references: [id])
   assignedMember   GroupMember? @relation(fields: [assignedMemberId], references: [id])
+  medicationAdministrations MedicationAdministration[]
 }
 
 model MedicationInventory {
@@ -85,4 +95,72 @@ model MedicationInventory {
   createdAt     DateTime @default(now())
 
   patient Patient @relation(fields: [patientId], references: [id])
+}
+
+model MedicationAdministration {
+  id                     String       @id @default(uuid())
+  taskId                 String?
+  patientId              String
+  medicationName         String
+  dosage                 String?
+  instructions           String?
+  administeredAt         DateTime
+  administeredByMemberId String?
+  recordedByMemberId     String?
+  notes                  String?
+  createdAt              DateTime     @default(now())
+
+  task                   Task?        @relation(fields: [taskId], references: [id])
+  patient                Patient      @relation(fields: [patientId], references: [id])
+  administeredByMember   GroupMember? @relation(fields: [administeredByMemberId], references: [id])
+  recordedByMember       GroupMember? @relation("MedicationAdministrationRecordedBy", fields: [recordedByMemberId], references: [id])
+}
+
+model VitalSign {
+  id         String   @id @default(uuid())
+  patientId  String
+  type       String
+  value      String
+  unit       String
+  notes      String?
+  recordedAt DateTime
+  createdAt  DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id])
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model PlannedShift {
+  id        String   @id @default(uuid())
+  userId    String
+  role      String
+  startAt   DateTime
+  endAt     DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user       User               @relation(fields: [userId], references: [id])
+  attendances ShiftAttendance[]
+}
+
+model ShiftAttendance {
+  id             String   @id @default(uuid())
+  plannedShiftId String?
+  userId         String
+  startedAt      DateTime
+  endedAt        DateTime?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  plannedShift PlannedShift? @relation(fields: [plannedShiftId], references: [id])
+  user         User          @relation(fields: [userId], references: [id])
 }

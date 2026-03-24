@@ -3,21 +3,39 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/tasks", label: "Tasks" },
-  { href: "/inventory", label: "Inventory" },
-  { href: "/patients", label: "Patients" },
-];
+import { hasPermission, type AppRole } from "@/lib/roles";
 
-export function AppNavigation() {
+const navItems = [
+  { href: "/dashboard", label: "Inicio", permission: "view_dashboard" },
+  { href: "/summary", label: "Resumen diario", permission: "view_summary" },
+  { href: "/shifts", label: "Turnos", permission: "view_shifts" },
+  { href: "/tasks", label: "Tareas", permission: "view_tasks" },
+  {
+    href: "/medication-history",
+    label: "Historial de medicación",
+    permission: "view_medication_history",
+  },
+  { href: "/inventory", label: "Inventario", permission: "view_inventory" },
+  { href: "/vitals", label: "Signos vitales", permission: "view_vitals" },
+  { href: "/patients", label: "Pacientes", permission: "view_patients" },
+  { href: "/users", label: "Usuarios", permission: "manage_family_workspace" },
+] as const;
+
+type AppNavigationProps = {
+  role: AppRole;
+};
+
+export function AppNavigation({ role }: AppNavigationProps) {
   const pathname = usePathname();
+  const visibleNavItems = navItems.filter((item) =>
+    hasPermission(role, item.permission)
+  );
 
   return (
     <nav className="border-b border-white/10 bg-black/40">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-4 md:px-6">
         <div className="mr-4 text-lg font-semibold text-white">Asistapp</div>
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href;
 
           return (

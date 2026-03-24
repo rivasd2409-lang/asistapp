@@ -14,10 +14,10 @@ export const TASK_BOARD_STATUSES = [
 ] as const;
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  PENDING: "Pending",
-  IN_PROGRESS: "In Progress",
-  COMPLETED: "Completed",
-  DISCARDED: "Discarded",
+  PENDING: "Pendiente",
+  IN_PROGRESS: "En curso",
+  COMPLETED: "Completada",
+  DISCARDED: "Descartada",
 };
 
 export const TASK_STATUS_BADGE_CLASSES: Record<TaskStatus, string> = {

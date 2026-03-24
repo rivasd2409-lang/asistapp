@@ -48,6 +48,7 @@ type TaskListItem = {
     name: string;
   };
   assignedMember: {
+    id: string;
     user: {
       name: string;
     };
@@ -56,6 +57,12 @@ type TaskListItem = {
 
 type TaskListProps = {
   tasks: TaskListItem[];
+  members: Array<{
+    id: string;
+    user: {
+      name: string;
+    };
+  }>;
 };
 
 function getDueDateTimestamp(dueDate: string | null) {
@@ -68,10 +75,10 @@ function getDueDateTimestamp(dueDate: string | null) {
 
 function formatDueDate(dueDate: string | null) {
   if (!dueDate) {
-    return "No due date";
+    return "Sin fecha límite";
   }
 
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat("es-HN", {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(dueDate));
@@ -89,7 +96,7 @@ function isTaskOverdue(task: TaskListItem) {
   return new Date(task.dueDate).getTime() < Date.now();
 }
 
-export function TaskList({ tasks }: TaskListProps) {
+export function TaskList({ tasks, members }: TaskListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedPatientId, setSelectedPatientId] = useState("ALL");
@@ -97,6 +104,9 @@ export function TaskList({ tasks }: TaskListProps) {
   const [dropTargetStatus, setDropTargetStatus] = useState<TaskStatus | null>(
     null
   );
+  const [administeredBySelections, setAdministeredBySelections] = useState<
+    Record<string, string>
+  >({});
 
   const [optimisticTasks, setOptimisticTaskStatus] = useOptimistic(
     tasks,
@@ -106,16 +116,26 @@ export function TaskList({ tasks }: TaskListProps) {
       )
   );
 
-  function handleStatusChange(taskId: string, status: TaskStatus) {
-    setOptimisticTaskStatus({ taskId, status });
-
+  function handleStatusChange(task: TaskListItem, status: TaskStatus) {
     startTransition(async () => {
+      setOptimisticTaskStatus({ taskId: task.id, status });
+
       try {
-        await updateTaskStatus(taskId, status);
+        await updateTaskStatus(task.id, status, {
+          administeredByMemberId:
+            task.category === "MEDICATION" && status === "COMPLETED"
+              ? administeredBySelections[task.id] || null
+              : null,
+          recordedByMemberId: null,
+        });
       } catch {
         router.refresh();
       }
     });
+  }
+
+  function findTaskById(taskId: string) {
+    return optimisticTasks.find((task) => task.id === taskId) ?? null;
   }
 
   const patientOptions = optimisticTasks.reduce<
@@ -168,9 +188,9 @@ export function TaskList({ tasks }: TaskListProps) {
             type="button"
             className="rounded border border-white/20 px-2 py-1 text-xs"
             disabled={isPending}
-            onClick={() => handleStatusChange(task.id, status)}
+            onClick={() => handleStatusChange(task, status)}
           >
-            Move to {TASK_STATUS_LABELS[status]}
+            Mover a {TASK_STATUS_LABELS[status]}
           </button>
         ))}
       </div>
@@ -229,32 +249,55 @@ export function TaskList({ tasks }: TaskListProps) {
 
         <div className="space-y-2 text-sm text-white/80">
           <p>
-            <strong className="text-white">Description:</strong>{" "}
+            <strong className="text-white">Descripción:</strong>{" "}
             {task.description || "-"}
           </p>
           <p>
-            <strong className="text-white">Patient:</strong> {task.patient.name}
+            <strong className="text-white">Paciente:</strong> {task.patient.name}
           </p>
           <p className={overdue ? "text-red-200" : ""}>
-            <strong className="text-white">Due:</strong> {formatDueDate(task.dueDate)}
+            <strong className="text-white">Fecha límite:</strong>{" "}
+            {formatDueDate(task.dueDate)}
           </p>
           <p>
-            <strong className="text-white">Recurrence:</strong> {recurrenceLabel}
+            <strong className="text-white">Recurrencia:</strong> {recurrenceLabel}
           </p>
           {task.category === "MEDICATION" ? (
             <>
               <p>
-                <strong className="text-white">Medication:</strong>{" "}
+                <strong className="text-white">Medicamento:</strong>{" "}
                 {task.medicationName || "-"}
               </p>
               <p>
-                <strong className="text-white">Dose:</strong>{" "}
+                <strong className="text-white">Dosis:</strong>{" "}
                 {formatMedicationDose(task.doseAmount, task.doseUnit, task.dosage)}
               </p>
               <p>
-                <strong className="text-white">Instructions:</strong>{" "}
+                <strong className="text-white">Instrucciones:</strong>{" "}
                 {task.instructions || "-"}
               </p>
+              <div>
+                <label className="mb-1 block text-xs font-medium uppercase tracking-wide text-white/60">
+                  Administrado por
+                </label>
+                <select
+                  className="w-full rounded border border-white/20 bg-black px-3 py-2 text-sm text-white"
+                  value={administeredBySelections[task.id] || ""}
+                  onChange={(event) =>
+                    setAdministeredBySelections((current) => ({
+                      ...current,
+                      [task.id]: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Sin registrar</option>
+                  {members.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.user.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               {task.inventory ? (
                 <div
                   className={`rounded-lg border px-3 py-2 ${
@@ -292,7 +335,7 @@ export function TaskList({ tasks }: TaskListProps) {
 
         {overdue ? (
           <p className="mt-3 rounded border border-red-400/30 bg-red-400/10 px-3 py-2 text-xs font-medium text-red-200">
-            Overdue task
+            Tarea vencida
           </p>
         ) : null}
 
@@ -303,7 +346,7 @@ export function TaskList({ tasks }: TaskListProps) {
         ) : null}
 
         <p className="mt-3 text-sm text-white/80">
-          <strong className="text-white">Assigned to:</strong>{" "}
+          <strong className="text-white">Asignada a:</strong>{" "}
           {task.assignedMember?.user.name || "Sin asignar"}
         </p>
         {renderQuickActions(task)}
@@ -344,13 +387,20 @@ export function TaskList({ tasks }: TaskListProps) {
             return;
           }
 
-          handleStatusChange(taskId, status);
+          const task = findTaskById(taskId);
+
+          if (!task) {
+            router.refresh();
+            return;
+          }
+
+          handleStatusChange(task, status);
         }}
       >
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold">{TASK_STATUS_LABELS[status]}</h3>
-            <p className="text-xs text-white/55">Tasks in this stage</p>
+            <p className="text-xs text-white/55">Tareas en este estado</p>
           </div>
           <span
             className={`rounded-full border px-3 py-1 text-xs font-semibold ${TASK_STATUS_BADGE_CLASSES[status]}`}
@@ -365,8 +415,8 @@ export function TaskList({ tasks }: TaskListProps) {
           ) : (
             <p className="rounded border border-dashed border-white/20 p-3 text-sm text-white/60">
               {draggedTaskId && isActiveDropTarget
-                ? "Drop task here"
-                : "No tasks in this column"}
+                ? "Suelta la tarea aquí"
+                : "No hay tareas en esta columna"}
             </p>
           )}
         </div>
@@ -379,22 +429,22 @@ export function TaskList({ tasks }: TaskListProps) {
       <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-white">Filter by patient</h3>
+            <h3 className="text-sm font-semibold text-white">Filtrar por paciente</h3>
             <p className="text-xs text-white/55">
-              Show tasks for one patient or view the full board
+              Muestra tareas de un paciente o revisa todo el tablero
             </p>
           </div>
 
           <div className="w-full sm:max-w-xs">
             <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
-              Patient
+              Paciente
             </label>
             <select
               className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
               value={selectedPatientId}
               onChange={(event) => setSelectedPatientId(event.target.value)}
             >
-              <option value="ALL">All patients</option>
+              <option value="ALL">Todos los pacientes</option>
               {patientOptions.map((patient) => (
                 <option key={patient.id} value={patient.id}>
                   {patient.name}
@@ -415,7 +465,7 @@ export function TaskList({ tasks }: TaskListProps) {
             <h3 className="text-lg font-semibold">
               {TASK_STATUS_LABELS.DISCARDED}
             </h3>
-            <p className="text-xs text-white/55">Hidden from the main board</p>
+            <p className="text-xs text-white/55">Ocultas del tablero principal</p>
           </div>
           <span
             className={`rounded-full border px-3 py-1 text-xs font-semibold ${TASK_STATUS_BADGE_CLASSES.DISCARDED}`}
@@ -429,7 +479,7 @@ export function TaskList({ tasks }: TaskListProps) {
             tasksByStatus.DISCARDED.map(renderTaskCard)
           ) : (
             <p className="rounded border border-dashed border-white/20 p-3 text-sm text-white/60">
-              No discarded tasks
+              No hay tareas descartadas
             </p>
           )}
         </div>

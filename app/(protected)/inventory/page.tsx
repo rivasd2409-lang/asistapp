@@ -1,37 +1,47 @@
-import {
-  createMedicationInventoryItem,
-  initialMedicationInventoryFormState,
-} from "@/app/actions";
+import { redirect } from "next/navigation";
+
+import { createMedicationInventoryItem } from "@/app/actions";
 import { MedicationInventoryForm } from "@/app/medication-inventory-form";
+import { initialMedicationInventoryFormState } from "@/app/medication-inventory-form-state";
 import { formatMedicationDose } from "@/app/medication-units";
 import { getAppData } from "@/lib/app-data";
+import { hasPermission } from "@/lib/roles";
 
 export default async function InventoryPage() {
   const data = await getAppData();
+  const viewer = data.viewer;
+
+  if (!viewer || !hasPermission(viewer.role, "view_inventory")) {
+    redirect("/dashboard");
+  }
+
+  const canUpdateInventory = hasPermission(viewer.role, "update_medication_inventory");
 
   return (
     <section className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Inventory</h1>
+        <h1 className="text-2xl font-bold">Inventario</h1>
         <p className="mt-2 text-white/65">
-          Track medication stock and review low-stock warnings.
+          Controla existencias y revisa rápidamente el bajo stock.
         </p>
       </div>
 
-      <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
-        <h2 className="mb-4 text-lg font-semibold">Create inventory item</h2>
-        <MedicationInventoryForm
-          action={createMedicationInventoryItem}
-          patients={data.patients}
-          initialState={initialMedicationInventoryFormState}
-        />
-      </section>
+      {canUpdateInventory ? (
+        <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
+          <h2 className="mb-4 text-lg font-semibold">Registrar inventario</h2>
+          <MedicationInventoryForm
+            action={createMedicationInventoryItem}
+            patients={data.patients}
+            initialState={initialMedicationInventoryFormState}
+          />
+        </section>
+      ) : null}
 
       <section>
         <div className="mb-4">
-          <h2 className="text-lg font-semibold">Inventory list</h2>
+          <h2 className="text-lg font-semibold">Listado</h2>
           <p className="text-sm text-white/60">
-            Review stock levels and identify low-stock medications quickly.
+            Consulta las existencias visibles para tu rol.
           </p>
         </div>
 

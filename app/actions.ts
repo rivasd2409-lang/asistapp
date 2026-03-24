@@ -1,8 +1,11 @@
 'use server';
 
 import { prisma } from "@/lib/db";
+import { requirePermission } from "@/lib/auth";
+import { normalizeAppRole } from "@/lib/roles";
 
-import { type MedicationInventoryFormState } from "./medication-inventory-form";
+import { type MedicationInventoryFormState } from "./medication-inventory-form-state";
+import { type VitalSignFormState } from "./vital-sign-form-state";
 import {
   formatMedicationDose,
   normalizeMedicationUnit,
@@ -12,26 +15,25 @@ import {
   isTaskCustomRecurrenceUnit,
   normalizeTaskRecurrenceType,
 } from "./task-recurrence";
-
-export const initialMedicationInventoryFormState: MedicationInventoryFormState = {
-  status: "idle",
-  message: "",
-  errors: {},
-};
+import { isVitalSignType } from "./vital-signs";
 
 export async function createUser() {
+  await requirePermission("manage_family_workspace");
+
   await prisma.user.upsert({
     where: { email: "daniel@example.com" },
     update: {},
     create: {
       name: "Daniel",
       email: "daniel@example.com",
-      role: "ADMIN",
+      role: "ADMIN_FAMILIA",
     },
   });
 }
 
 export async function createGroup() {
+  await requirePermission("manage_family_workspace");
+
   const existingGroup = await prisma.group.findFirst({
     where: { name: "Cuidado Wilfredo y Olga" },
   });
@@ -46,6 +48,8 @@ export async function createGroup() {
 }
 
 export async function createPatient() {
+  await requirePermission("manage_family_workspace");
+
   const group = await prisma.group.findFirst({
     where: { name: "Cuidado Wilfredo y Olga" },
   });
@@ -71,9 +75,13 @@ export async function createPatient() {
 }
 
 export async function addUserToGroup(formData: FormData) {
+  await requirePermission("manage_family_workspace");
+
   const userId = formData.get("userId") as string;
   const groupId = formData.get("groupId") as string;
-  const role = (formData.get("role") as string) || "ADMIN";
+  const role = normalizeAppRole(
+    (formData.get("role") as string) || "FAMILIAR_LECTURA"
+  );
 
   if (!userId || !groupId) return;
 
@@ -96,6 +104,8 @@ export async function addUserToGroup(formData: FormData) {
 }
 
 export async function createTask(formData: FormData) {
+  await requirePermission("create_tasks");
+
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
   const category = normalizeTaskCategory(
@@ -173,6 +183,8 @@ export async function createMedicationInventoryItem(
   _state: MedicationInventoryFormState,
   formData: FormData
 ): Promise<MedicationInventoryFormState> {
+  await requirePermission("update_medication_inventory");
+
   const medicationName = ((formData.get("medicationName") as string) || "").trim();
   const unitValue = (formData.get("unit") as string) || "";
   const currentStockValue = formData.get("currentStock") as string;
@@ -255,6 +267,69 @@ export async function createMedicationInventoryItem(
   return {
     status: "success",
     message: "Inventario creado correctamente.",
+    errors: {},
+  };
+}
+
+export async function createVitalSignRecord(
+  _state: VitalSignFormState,
+  formData: FormData
+): Promise<VitalSignFormState> {
+  await requirePermission("register_vital_signs");
+
+  const patientId = ((formData.get("patientId") as string) || "").trim();
+  const typeValue = ((formData.get("type") as string) || "").trim();
+  const value = ((formData.get("value") as string) || "").trim();
+  const unit = ((formData.get("unit") as string) || "").trim();
+  const notes = ((formData.get("notes") as string) || "").trim();
+  const recordedAtValue = ((formData.get("recordedAt") as string) || "").trim();
+
+  const errors: VitalSignFormState["errors"] = {};
+
+  if (!patientId) {
+    errors.patientId = "Selecciona un paciente.";
+  }
+
+  if (!isVitalSignType(typeValue)) {
+    errors.type = "Selecciona un tipo válido.";
+  }
+
+  if (!value) {
+    errors.value = "Ingresa un valor.";
+  }
+
+  if (!unit) {
+    errors.unit = "Ingresa una unidad.";
+  }
+
+  const parsedRecordedAt = recordedAtValue ? new Date(recordedAtValue) : null;
+
+  if (!parsedRecordedAt || Number.isNaN(parsedRecordedAt.getTime())) {
+    errors.recordedAt = "Ingresa una fecha y hora válidas.";
+  }
+
+  if (Object.keys(errors).length > 0) {
+    return {
+      status: "error",
+      message: "Revisa los campos marcados e inténtalo de nuevo.",
+      errors,
+    };
+  }
+
+  await prisma.vitalSign.create({
+    data: {
+      patientId,
+      type: typeValue,
+      value,
+      unit,
+      notes: notes || null,
+      recordedAt: parsedRecordedAt as Date,
+    },
+  });
+
+  return {
+    status: "success",
+    message: "Signo vital registrado correctamente.",
     errors: {},
   };
 }

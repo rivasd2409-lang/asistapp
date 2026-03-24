@@ -19,11 +19,11 @@ export function normalizeTaskCategory(value: string): TaskCategory {
 
 export const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
   GENERAL: "General",
-  MEDICATION: "Medication",
-  VITAL_SIGNS: "Vital Signs",
-  HYGIENE: "Hygiene",
-  MEAL: "Meal",
-  CLEANING: "Cleaning",
+  MEDICATION: "Medicación",
+  VITAL_SIGNS: "Signos vitales",
+  HYGIENE: "Higiene",
+  MEAL: "Comida",
+  CLEANING: "Limpieza",
 };
 
 export const TASK_CATEGORY_BADGE_CLASSES: Record<TaskCategory, string> = {

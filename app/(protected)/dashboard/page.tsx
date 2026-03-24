@@ -1,5 +1,5 @@
-import { sendNotifications } from "@/lib/notifications";
 import { getAppData } from "@/lib/app-data";
+import { sendNotifications } from "@/lib/notifications";
 
 export default async function DashboardPage() {
   const data = await getAppData();
@@ -8,26 +8,30 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-sm text-white/60">Users</p>
+          <p className="text-sm text-white/60">Usuarios</p>
           <p className="mt-2 text-2xl font-semibold">{data.summary.users}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-sm text-white/60">Groups</p>
+          <p className="text-sm text-white/60">Grupos</p>
           <p className="mt-2 text-2xl font-semibold">{data.summary.groups}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-sm text-white/60">Patients</p>
+          <p className="text-sm text-white/60">Pacientes</p>
           <p className="mt-2 text-2xl font-semibold">{data.summary.patients}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-sm text-white/60">Tasks</p>
+          <p className="text-sm text-white/60">Tareas</p>
           <p className="mt-2 text-2xl font-semibold">{data.summary.tasks}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <p className="text-sm text-white/60">Inventory items</p>
+          <p className="text-sm text-white/60">Registros de inventario</p>
           <p className="mt-2 text-2xl font-semibold">{data.summary.inventoryItems}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="text-sm text-white/60">Signos vitales</p>
+          <p className="mt-2 text-2xl font-semibold">{data.summary.vitalSigns}</p>
         </div>
       </section>
 
@@ -62,7 +66,7 @@ export default async function DashboardPage() {
       <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
         <div className="mb-4 flex items-center gap-2">
           <span className="text-lg text-sky-300">*</span>
-          <h2 className="text-xl font-semibold">Notification log</h2>
+          <h2 className="text-xl font-semibold">Registro de notificaciones</h2>
         </div>
 
         <div className="space-y-2">
@@ -77,7 +81,7 @@ export default async function DashboardPage() {
             ))
           ) : (
             <p className="rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/65">
-              No notifications generated right now.
+              No hay notificaciones generadas en este momento.
             </p>
           )}
         </div>
