@@ -39,6 +39,11 @@ export async function updateTaskStatus(
       where: { id: taskId },
       include: {
         assignedMember: true,
+        patient: {
+          select: {
+            groupId: true,
+          },
+        },
       },
     });
 
@@ -46,24 +51,45 @@ export async function updateTaskStatus(
       throw new Error("Task not found.");
     }
 
-    if (
-      isAssignedCareRole(currentUser.role) &&
-      currentTask.assignedMember?.userId !== currentUser.id
-    ) {
-      throw new Error("No autorizado para esta tarea.");
-    }
-
     const recurrenceType = normalizeTaskRecurrenceType(
       currentTask.recurrenceType
     );
     const category = normalizeTaskCategory(currentTask.category);
     const now = new Date();
+    const currentGroupMember = await tx.groupMember.findFirst({
+      where: {
+        userId: currentUser.id,
+        groupId: currentTask.patient.groupId,
+      },
+    });
+
+    if (isAssignedCareRole(currentUser.role)) {
+      if (currentTask.assignedMemberId) {
+        if (currentTask.assignedMember?.userId !== currentUser.id) {
+          throw new Error("No autorizado para esta tarea.");
+        }
+      } else {
+        if (!currentGroupMember) {
+          throw new Error("No autorizado para esta tarea.");
+        }
+
+        if (currentUser.role === "APOYO_DOMESTICO" && category === "MEDICATION") {
+          throw new Error("No autorizado para completar esta tarea.");
+        }
+      }
+    }
+
+    const completionMemberId =
+      status === "COMPLETED"
+        ? options?.administeredByMemberId || currentGroupMember?.id || null
+        : null;
 
     const updatedTask = await tx.task.update({
       where: { id: taskId },
       data: {
         status,
         completedAt: status === "COMPLETED" ? now : null,
+        completedByMemberId: completionMemberId,
       },
     });
 
@@ -94,8 +120,9 @@ export async function updateTaskStatus(
           dosage: currentTask.dosage,
           instructions: currentTask.instructions,
           administeredAt: now,
-          administeredByMemberId: options?.administeredByMemberId || null,
-          recordedByMemberId: options?.recordedByMemberId || null,
+          administeredByMemberId: completionMemberId,
+          recordedByMemberId:
+            options?.recordedByMemberId || currentGroupMember?.id || null,
           notes: null,
         },
       });

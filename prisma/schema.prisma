@@ -39,7 +39,8 @@ model GroupMember {
   user  User  @relation(fields: [userId], references: [id])
   group Group @relation(fields: [groupId], references: [id])
 
-  tasks Task[]
+  assignedTasks Task[] @relation("TaskAssignedMember")
+  completedTasks Task[] @relation("TaskCompletedByMember")
   medicationAdministrations MedicationAdministration[]
   recordedMedicationAdministrations MedicationAdministration[] @relation("MedicationAdministrationRecordedBy")
 }
@@ -82,13 +83,15 @@ model Task {
   recurrenceInterval Int?
   recurrenceUnit   String?
   completedAt      DateTime?
+  completedByMemberId String?
   nextOccurrenceTaskId String?
   patientId        String
   assignedMemberId String?
   createdAt        DateTime    @default(now())
 
   patient          Patient      @relation(fields: [patientId], references: [id])
-  assignedMember   GroupMember? @relation(fields: [assignedMemberId], references: [id])
+  assignedMember   GroupMember? @relation("TaskAssignedMember", fields: [assignedMemberId], references: [id])
+  completedByMember GroupMember? @relation("TaskCompletedByMember", fields: [completedByMemberId], references: [id])
   medicationAdministrations MedicationAdministration[]
 }
 

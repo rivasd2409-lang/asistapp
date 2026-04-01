@@ -49,8 +49,19 @@ export default async function MyShiftPage() {
 
   const now = new Date();
   const { start: todayStart, end: todayEnd } = getTodayRange(now);
+  const currentUserGroupMemberships = await prisma.groupMember.findMany({
+    where: {
+      userId: viewer.id,
+    },
+    select: {
+      groupId: true,
+    },
+  });
+  const currentUserGroupIds = currentUserGroupMemberships.map(
+    (membership) => membership.groupId
+  );
 
-  const [activeAttendance, todayPlannedShift, nextPlannedShift, assignedTasks] =
+  const [activeAttendance, todayPlannedShift, nextPlannedShift, visibleTasks] =
     await Promise.all([
       prisma.shiftAttendance.findFirst({
         where: {
@@ -89,9 +100,28 @@ export default async function MyShiftPage() {
       }),
       prisma.task.findMany({
         where: {
-          assignedMember: {
-            userId: viewer.id,
-          },
+          OR: [
+            {
+              assignedMember: {
+                userId: viewer.id,
+              },
+            },
+            {
+              assignedMemberId: null,
+              patient: {
+                groupId: {
+                  in: currentUserGroupIds,
+                },
+              },
+              ...(viewer.role === "APOYO_DOMESTICO"
+                ? {
+                    category: {
+                      not: "MEDICATION",
+                    },
+                  }
+                : {}),
+            },
+          ],
         },
         include: {
           patient: true,
@@ -124,7 +154,7 @@ export default async function MyShiftPage() {
           }
         : null;
 
-  const operationalTasks = assignedTasks.filter((task) => {
+  const operationalTasks = visibleTasks.filter((task) => {
     if (task.status === "COMPLETED") {
       return (
         isWithinRange(task.completedAt, todayStart, todayEnd) ||
@@ -162,6 +192,7 @@ export default async function MyShiftPage() {
         name: task.patient.name,
       },
       categoryLabel: TASK_CATEGORY_LABELS[category],
+      isShared: !task.assignedMemberId,
     };
   });
 

@@ -53,6 +53,12 @@ type TaskListItem = {
       name: string;
     };
   } | null;
+  completedByMember: {
+    id: string;
+    user: {
+      name: string;
+    };
+  } | null;
 };
 
 type TaskListProps = {
@@ -371,9 +377,17 @@ export function TaskList({ tasks, members }: TaskListProps) {
         ) : null}
 
         <p className="mt-3 text-sm text-white/80">
-          <strong className="text-white">Asignada a:</strong>{" "}
-          {task.assignedMember?.user.name || "Sin asignar"}
+          <strong className="text-white">Visibilidad:</strong>{" "}
+          {task.assignedMember?.user.name
+            ? `Asignada a ${task.assignedMember.user.name}`
+            : "Compartida con el equipo"}
         </p>
+        {task.completedByMember ? (
+          <p className="mt-1 text-sm text-white/70">
+            <strong className="text-white">Completada por:</strong>{" "}
+            {task.completedByMember.user.name}
+          </p>
+        ) : null}
         {renderQuickActions(task)}
       </article>
     );

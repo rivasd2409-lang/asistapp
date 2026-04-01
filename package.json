@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "cleanup:operational": "node scripts/cleanup-operational-data.mjs"
+    "cleanup:operational": "node scripts/cleanup-operational-data.mjs",
+    "backfill:wilfredo-care-package": "node scripts/backfill-wilfredo-care-package.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

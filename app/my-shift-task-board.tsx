@@ -22,6 +22,7 @@ type MyShiftTask = {
     name: string;
   };
   categoryLabel: string;
+  isShared: boolean;
 };
 
 type MyShiftTaskBoardProps = {
@@ -227,6 +228,10 @@ export function MyShiftTaskBoard({ tasks }: MyShiftTaskBoardProps) {
                   </p>
                   <p className="mt-1 text-sm text-white/70">
                     <strong className="text-white">Fecha límite:</strong> {formatDueDate(task.dueDate)}
+                  </p>
+                  <p className="mt-1 text-sm text-white/70">
+                    <strong className="text-white">Visibilidad:</strong>{" "}
+                    {task.isShared ? "Compartida con el equipo" : "Asignada directamente a ti"}
                   </p>
                   <p className="mt-1 text-sm text-white/70">
                     <strong className="text-white">Descripción:</strong> {task.description || "-"}

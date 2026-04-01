@@ -84,6 +84,7 @@ const ROLE_PERMISSIONS: Record<AppRole, AppPermission[]> = {
     "view_shifts",
     "view_tasks",
     "update_task_status",
+    "view_inventory",
     "view_patients",
     "view_medication_history",
     "mark_shift",

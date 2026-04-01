@@ -14,13 +14,52 @@ export async function getAppData() {
   const now = new Date();
   const next24Hours = new Date(now.getTime() + 24 * 60 * 60 * 1000);
   const next2Hours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-  const isAssignedOnlyScope = currentUser
-    ? isAssignedCareRole(currentUser.role)
-    : false;
+  const isCareRole = currentUser ? isAssignedCareRole(currentUser.role) : false;
   const canManageFamilyWorkspace = hasPermission(
     currentUser?.role || "",
     "manage_family_workspace"
   );
+  const currentUserGroupMemberships = currentUser
+    ? await prisma.groupMember.findMany({
+        where: {
+          userId: currentUser.id,
+        },
+        select: {
+          id: true,
+          groupId: true,
+        },
+      })
+    : [];
+  const currentUserGroupIds = currentUserGroupMemberships.map(
+    (membership) => membership.groupId
+  );
+  const taskScopeWhere =
+    isCareRole && currentUser
+      ? {
+          OR: [
+            {
+              assignedMember: {
+                userId: currentUser.id,
+              },
+            },
+            {
+              assignedMemberId: null,
+              patient: {
+                groupId: {
+                  in: currentUserGroupIds,
+                },
+              },
+              ...(currentUser.role === "APOYO_DOMESTICO"
+                ? {
+                    category: {
+                      not: "MEDICATION",
+                    },
+                  }
+                : {}),
+            },
+          ],
+        }
+      : undefined;
 
   const [users, groups, patients, members, tasks, inventoryItems, vitalSigns] =
     await Promise.all([
@@ -55,17 +94,15 @@ export async function getAppData() {
         },
       }),
       prisma.task.findMany({
-        where:
-          isAssignedOnlyScope && currentUser
-            ? {
-                assignedMember: {
-                  userId: currentUser.id,
-                },
-              }
-            : undefined,
+        where: taskScopeWhere,
         include: {
           patient: true,
           assignedMember: {
+            include: {
+              user: true,
+            },
+          },
+          completedByMember: {
             include: {
               user: true,
             },
@@ -157,13 +194,13 @@ export async function getAppData() {
   const visiblePatientIds = new Set(
     normalizedTasksWithInventory.map((task) => task.patientId)
   );
-  const filteredPatients = isAssignedOnlyScope
+  const filteredPatients = isCareRole
     ? normalizedPatients.filter((patient) => visiblePatientIds.has(patient.id))
     : normalizedPatients;
-  const filteredInventoryItems = isAssignedOnlyScope
+  const filteredInventoryItems = isCareRole
     ? normalizedInventoryItems.filter((item) => visiblePatientIds.has(item.patientId))
     : normalizedInventoryItems;
-  const filteredVitalSigns = isAssignedOnlyScope
+  const filteredVitalSigns = isCareRole
     ? normalizedVitalSigns.filter((record) => visiblePatientIds.has(record.patientId))
     : normalizedVitalSigns;
   const filteredMembers = canManageFamilyWorkspace
