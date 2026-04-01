@@ -36,7 +36,7 @@ export default async function BitacoraPage() {
     }),
   ]);
 
-  const normalizedEntries = entries.map((entry) => ({
+  const normalizedEntries = entries.map((entry: typeof entries[number]) => ({
     id: entry.id,
     patientId: entry.patientId,
     note: entry.note,
