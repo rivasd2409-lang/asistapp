@@ -68,7 +68,7 @@ export default async function BitacoraPage() {
           <LogEntryForm
             action={createLogEntry}
             initialState={initialLogEntryFormState}
-            patients={patients.map((patient) => ({
+            patients={patients.map((patient: typeof patients[number]) => ({
               id: patient.id,
               name: patient.name,
             }))}
@@ -77,7 +77,7 @@ export default async function BitacoraPage() {
       ) : null}
 
       <LogbookHistory
-        patients={patients.map((patient) => ({
+        patients={patients.map((patient: typeof patients[number]) => ({
           id: patient.id,
           name: patient.name,
         }))}
