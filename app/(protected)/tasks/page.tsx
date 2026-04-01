@@ -43,7 +43,7 @@ export default async function TasksPage() {
         <div className="mb-4">
           <h2 className="text-lg font-semibold">Tablero de tareas</h2>
           <p className="text-sm text-white/60">
-            Actualiza estados y revisa el trabajo pendiente.
+            Revisa el trabajo del día, cambia estados y usa los filtros por fecha y paciente.
           </p>
         </div>
         <TaskList tasks={data.tasks} members={data.members} />

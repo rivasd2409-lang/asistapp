@@ -73,6 +73,20 @@ function getDueDateTimestamp(dueDate: string | null) {
   return new Date(dueDate).getTime();
 }
 
+function getTodayInputValue() {
+  const now = new Date();
+  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+
+  return local.toISOString().slice(0, 10);
+}
+
+function getLocalDateValue(value: string) {
+  const date = new Date(value);
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+
+  return local.toISOString().slice(0, 10);
+}
+
 function formatDueDate(dueDate: string | null) {
   if (!dueDate) {
     return "Sin fecha límite";
@@ -100,6 +114,7 @@ export function TaskList({ tasks, members }: TaskListProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [selectedPatientId, setSelectedPatientId] = useState("ALL");
+  const [selectedDate, setSelectedDate] = useState(getTodayInputValue);
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [dropTargetStatus, setDropTargetStatus] = useState<TaskStatus | null>(
     null
@@ -153,7 +168,13 @@ export function TaskList({ tasks, members }: TaskListProps) {
       ? optimisticTasks
       : optimisticTasks.filter((task) => task.patient.id === selectedPatientId);
 
-  const sortedVisibleTasks = [...visibleTasks].sort((left, right) => {
+  const tasksForSelectedDate = visibleTasks.filter(
+    (task) => task.dueDate && getLocalDateValue(task.dueDate) === selectedDate
+  );
+
+  const undatedTasks = visibleTasks.filter((task) => !task.dueDate);
+
+  const sortedVisibleTasks = [...tasksForSelectedDate].sort((left, right) => {
     const dueDateDifference =
       getDueDateTimestamp(left.dueDate) - getDueDateTimestamp(right.dueDate);
 
@@ -174,6 +195,10 @@ export function TaskList({ tasks, members }: TaskListProps) {
     COMPLETED: sortedVisibleTasks.filter((task) => task.status === "COMPLETED"),
     DISCARDED: sortedVisibleTasks.filter((task) => task.status === "DISCARDED"),
   };
+
+  const sortedUndatedTasks = [...undatedTasks].sort((left, right) => {
+    return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+  });
 
   function renderQuickActions(task: TaskListItem) {
     const availableStatuses = TASK_STATUSES.filter(
@@ -429,28 +454,52 @@ export function TaskList({ tasks, members }: TaskListProps) {
       <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-white">Filtrar por paciente</h3>
+            <h3 className="text-sm font-semibold text-white">Vista diaria</h3>
             <p className="text-xs text-white/55">
-              Muestra tareas de un paciente o revisa todo el tablero
+              El tablero principal muestra solo las tareas con fecha para el día seleccionado.
             </p>
           </div>
 
-          <div className="w-full sm:max-w-xs">
-            <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
-              Paciente
-            </label>
-            <select
-              className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
-              value={selectedPatientId}
-              onChange={(event) => setSelectedPatientId(event.target.value)}
-            >
-              <option value="ALL">Todos los pacientes</option>
-              {patientOptions.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name}
-                </option>
-              ))}
-            </select>
+          <div className="grid w-full gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,220px)_auto] md:items-end">
+            <div>
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+                Fecha
+              </label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+                Paciente
+              </label>
+              <select
+                className="w-full rounded-xl border border-white/15 bg-black px-3 py-2 text-sm text-white"
+                value={selectedPatientId}
+                onChange={(event) => setSelectedPatientId(event.target.value)}
+              >
+                <option value="ALL">Todos los pacientes</option>
+                {patientOptions.map((patient) => (
+                  <option key={patient.id} value={patient.id}>
+                    {patient.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                className="rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/80 hover:bg-white/10"
+                onClick={() => setSelectedDate(getTodayInputValue())}
+              >
+                Hoy
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -458,6 +507,30 @@ export function TaskList({ tasks, members }: TaskListProps) {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {TASK_BOARD_STATUSES.map(renderColumn)}
       </div>
+
+      <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold">Tareas sin fecha</h3>
+            <p className="text-xs text-white/55">
+              Se mantienen fuera del tablero diario hasta que tengan fecha límite.
+            </p>
+          </div>
+          <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">
+            {sortedUndatedTasks.length}
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {sortedUndatedTasks.length > 0 ? (
+            sortedUndatedTasks.map(renderTaskCard)
+          ) : (
+            <p className="rounded border border-dashed border-white/20 p-3 text-sm text-white/60">
+              No hay tareas sin fecha
+            </p>
+          )}
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
         <div className="mb-4 flex items-center justify-between gap-3">
