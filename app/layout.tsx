@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Asistapp",
-  description: "Caregiving dashboard",
+  description: "Panel de cuidado familiar",
 };
 
 export default function RootLayout({
@@ -24,10 +24,27 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-black text-white">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function () {
+                try {
+                  var savedTheme = window.localStorage.getItem("asistapp-theme") || "light";
+                  document.documentElement.dataset.theme = savedTheme;
+                } catch (error) {
+                  document.documentElement.dataset.theme = "light";
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-full bg-[var(--bg)] text-[var(--text)]">
         {children}
       </body>
     </html>

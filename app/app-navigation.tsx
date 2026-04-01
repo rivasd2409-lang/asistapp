@@ -7,7 +7,9 @@ import { hasPermission, type AppRole } from "@/lib/roles";
 
 const navItems = [
   { href: "/dashboard", label: "Inicio", permission: "view_dashboard" },
+  { href: "/mi-turno", label: "Mi turno", permission: "update_task_status" },
   { href: "/summary", label: "Resumen diario", permission: "view_summary" },
+  { href: "/bitacora", label: "Bitácora", permission: "view_logbook" },
   { href: "/shifts", label: "Turnos", permission: "view_shifts" },
   { href: "/tasks", label: "Tareas", permission: "view_tasks" },
   {
@@ -19,6 +21,11 @@ const navItems = [
   { href: "/vitals", label: "Signos vitales", permission: "view_vitals" },
   { href: "/patients", label: "Pacientes", permission: "view_patients" },
   { href: "/users", label: "Usuarios", permission: "manage_family_workspace" },
+  {
+    href: "/reporte-horas",
+    label: "Reporte de horas",
+    permission: "manage_family_workspace",
+  },
 ] as const;
 
 type AppNavigationProps = {

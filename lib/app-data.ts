@@ -35,6 +35,9 @@ export async function getAppData() {
           })
         : Promise.resolve([]),
       prisma.patient.findMany({
+        include: {
+          group: true,
+        },
         orderBy: { createdAt: "desc" },
       }),
       prisma.groupMember.findMany({
@@ -90,6 +93,18 @@ export async function getAppData() {
       }),
     ]);
 
+  const normalizedPatients = patients.map((patient) => ({
+    ...patient,
+    createdAt: patient.createdAt.toISOString(),
+    group: patient.group
+      ? {
+          id: patient.group.id,
+          name: patient.group.name,
+          createdAt: patient.group.createdAt.toISOString(),
+        }
+      : null,
+  }));
+
   const normalizedTasks = tasks.map((task) => ({
     ...task,
     dueDate: task.dueDate?.toISOString() ?? null,
@@ -143,8 +158,8 @@ export async function getAppData() {
     normalizedTasksWithInventory.map((task) => task.patientId)
   );
   const filteredPatients = isAssignedOnlyScope
-    ? patients.filter((patient) => visiblePatientIds.has(patient.id))
-    : patients;
+    ? normalizedPatients.filter((patient) => visiblePatientIds.has(patient.id))
+    : normalizedPatients;
   const filteredInventoryItems = isAssignedOnlyScope
     ? normalizedInventoryItems.filter((item) => visiblePatientIds.has(item.patientId))
     : normalizedInventoryItems;

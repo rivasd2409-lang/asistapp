@@ -6,13 +6,58 @@ import { prisma } from "@/lib/db";
 import { requireCurrentUser, requirePermission } from "@/lib/auth";
 import { hasPermission, normalizeAppRole } from "@/lib/roles";
 
-function parseDateTime(value: FormDataEntryValue | null) {
-  if (typeof value !== "string" || !value) {
+function parseShiftDate(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !value.trim()) {
     return null;
   }
 
-  const parsed = new Date(value);
+  const parsed = new Date(`${value}T00:00:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function parseShiftTime(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || !/^\d{2}:\d{2}$/.test(value)) {
+    return null;
+  }
+
+  const [hoursValue, minutesValue] = value.split(":");
+  const hours = Number.parseInt(hoursValue, 10);
+  const minutes = Number.parseInt(minutesValue, 10);
+
+  if (
+    Number.isNaN(hours) ||
+    Number.isNaN(minutes) ||
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
+  return { hours, minutes };
+}
+
+function parseShiftWindow(formData: FormData) {
+  const shiftDate = parseShiftDate(formData.get("shiftDate"));
+  const startTime = parseShiftTime(formData.get("startTime"));
+  const endTime = parseShiftTime(formData.get("endTime"));
+
+  if (!shiftDate || !startTime || !endTime) {
+    return null;
+  }
+
+  const startAt = new Date(shiftDate);
+  startAt.setHours(startTime.hours, startTime.minutes, 0, 0);
+
+  const endAt = new Date(shiftDate);
+  endAt.setHours(endTime.hours, endTime.minutes, 0, 0);
+
+  if (endAt <= startAt) {
+    endAt.setDate(endAt.getDate() + 1);
+  }
+
+  return { startAt, endAt };
 }
 
 export async function createPlannedShift(formData: FormData) {
@@ -20,11 +65,10 @@ export async function createPlannedShift(formData: FormData) {
 
   const userId = (formData.get("userId") as string) || "";
   const role = normalizeAppRole((formData.get("role") as string) || "");
-  const startAt = parseDateTime(formData.get("startAt"));
-  const endAt = parseDateTime(formData.get("endAt"));
   const notes = ((formData.get("notes") as string) || "").trim();
+  const shiftWindow = parseShiftWindow(formData);
 
-  if (!userId || !startAt || !endAt || endAt <= startAt) {
+  if (!userId || !shiftWindow) {
     return;
   }
 
@@ -32,8 +76,8 @@ export async function createPlannedShift(formData: FormData) {
     data: {
       userId,
       role,
-      startAt,
-      endAt,
+      startAt: shiftWindow.startAt,
+      endAt: shiftWindow.endAt,
       notes: notes || null,
     },
   });
@@ -47,11 +91,10 @@ export async function updatePlannedShift(formData: FormData) {
   const shiftId = (formData.get("shiftId") as string) || "";
   const userId = (formData.get("userId") as string) || "";
   const role = normalizeAppRole((formData.get("role") as string) || "");
-  const startAt = parseDateTime(formData.get("startAt"));
-  const endAt = parseDateTime(formData.get("endAt"));
   const notes = ((formData.get("notes") as string) || "").trim();
+  const shiftWindow = parseShiftWindow(formData);
 
-  if (!shiftId || !userId || !startAt || !endAt || endAt <= startAt) {
+  if (!shiftId || !userId || !shiftWindow) {
     return;
   }
 
@@ -62,8 +105,8 @@ export async function updatePlannedShift(formData: FormData) {
     data: {
       userId,
       role,
-      startAt,
-      endAt,
+      startAt: shiftWindow.startAt,
+      endAt: shiftWindow.endAt,
       notes: notes || null,
     },
   });

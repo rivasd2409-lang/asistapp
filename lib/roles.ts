@@ -10,6 +10,8 @@ export type AppRole = (typeof APP_ROLES)[number];
 export type AppPermission =
   | "view_dashboard"
   | "view_summary"
+  | "view_logbook"
+  | "create_log_entries"
   | "view_shifts"
   | "view_tasks"
   | "create_tasks"
@@ -42,6 +44,8 @@ const ROLE_PERMISSIONS: Record<AppRole, AppPermission[]> = {
   ADMIN_FAMILIA: [
     "view_dashboard",
     "view_summary",
+    "view_logbook",
+    "create_log_entries",
     "view_shifts",
     "view_tasks",
     "create_tasks",
@@ -59,6 +63,8 @@ const ROLE_PERMISSIONS: Record<AppRole, AppPermission[]> = {
   ENFERMERA: [
     "view_dashboard",
     "view_summary",
+    "view_logbook",
+    "create_log_entries",
     "view_shifts",
     "view_tasks",
     "update_task_status",
@@ -73,6 +79,8 @@ const ROLE_PERMISSIONS: Record<AppRole, AppPermission[]> = {
   APOYO_DOMESTICO: [
     "view_dashboard",
     "view_summary",
+    "view_logbook",
+    "create_log_entries",
     "view_shifts",
     "view_tasks",
     "update_task_status",
@@ -84,6 +92,7 @@ const ROLE_PERMISSIONS: Record<AppRole, AppPermission[]> = {
   FAMILIAR_LECTURA: [
     "view_dashboard",
     "view_summary",
+    "view_logbook",
     "view_shifts",
     "view_patients",
     "view_medication_history",

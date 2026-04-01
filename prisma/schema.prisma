@@ -19,6 +19,7 @@ model User {
   sessions     Session[]
   plannedShifts   PlannedShift[]
   shiftAttendances ShiftAttendance[]
+  logEntries    LogEntry[]
 }
 
 model Group {
@@ -47,6 +48,12 @@ model Patient {
   id        String   @id @default(uuid())
   name      String
   age       Int
+  dni       String?
+  clinicalSummary String?
+  criticalMedications String?
+  emergencyAlerts String?
+  triageMessage String?
+  emergencyContacts String?
   groupId   String
   createdAt DateTime @default(now())
 
@@ -56,6 +63,7 @@ model Patient {
   medicationInventory MedicationInventory[]
   vitalSigns          VitalSign[]
   medicationAdministrations MedicationAdministration[]
+  logEntries          LogEntry[]
 }
 
 model Task {
@@ -163,4 +171,20 @@ model ShiftAttendance {
 
   plannedShift PlannedShift? @relation(fields: [plannedShiftId], references: [id])
   user         User          @relation(fields: [userId], references: [id])
+  logEntries   LogEntry[]
+}
+
+model LogEntry {
+  id                String           @id @default(uuid())
+  patientId         String
+  userId            String
+  shiftAttendanceId String?
+  category          String
+  note              String
+  priority          String?
+  createdAt         DateTime         @default(now())
+
+  patient           Patient          @relation(fields: [patientId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+  shiftAttendance   ShiftAttendance? @relation(fields: [shiftAttendanceId], references: [id])
 }

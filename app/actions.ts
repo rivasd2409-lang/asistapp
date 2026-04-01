@@ -1,5 +1,7 @@
 'use server';
 
+import { refresh } from "next/cache";
+
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth";
 import { normalizeAppRole } from "@/lib/roles";
@@ -31,54 +33,156 @@ export async function createUser() {
   });
 }
 
-export async function createGroup() {
+export async function createGroup(formData: FormData) {
   await requirePermission("manage_family_workspace");
+
+  const name = ((formData.get("name") as string) || "").trim();
+
+  if (!name) {
+    return;
+  }
 
   const existingGroup = await prisma.group.findFirst({
-    where: { name: "Cuidado Wilfredo y Olga" },
+    where: { name },
   });
 
-  if (!existingGroup) {
-    await prisma.group.create({
-      data: {
-        name: "Cuidado Wilfredo y Olga",
-      },
-    });
+  if (existingGroup) {
+    return;
   }
-}
 
-export async function createPatient() {
-  await requirePermission("manage_family_workspace");
-
-  const group = await prisma.group.findFirst({
-    where: { name: "Cuidado Wilfredo y Olga" },
-  });
-
-  if (!group) return;
-
-  const existingPatient = await prisma.patient.findFirst({
-    where: {
-      name: "Wilfredo Rivas Flores",
-      groupId: group.id,
+  await prisma.group.create({
+    data: {
+      name,
     },
   });
+
+  refresh();
+}
+
+export async function updateGroup(formData: FormData) {
+  await requirePermission("manage_family_workspace");
+
+  const groupId = ((formData.get("groupId") as string) || "").trim();
+  const name = ((formData.get("name") as string) || "").trim();
+
+  if (!groupId || !name) {
+    return;
+  }
+
+  await prisma.group.update({
+    where: {
+      id: groupId,
+    },
+    data: {
+      name,
+    },
+  });
+
+  refresh();
+}
+
+export async function createPatient(formData: FormData) {
+  await requirePermission("manage_family_workspace");
+
+  const name = ((formData.get("name") as string) || "").trim();
+  const ageValue = ((formData.get("age") as string) || "").trim();
+  const groupId = ((formData.get("groupId") as string) || "").trim();
+  const dni = ((formData.get("dni") as string) || "").trim();
+  const age = Number.parseInt(ageValue, 10);
+
+  if (!name || !groupId || Number.isNaN(age) || age < 0) {
+    return;
+  }
+
+  await prisma.patient.create({
+    data: {
+      name,
+      age,
+      groupId,
+      dni: dni || null,
+      clinicalSummary: null,
+      criticalMedications: null,
+      emergencyAlerts: null,
+      triageMessage: null,
+      emergencyContacts: null,
+    },
+  });
+
+  refresh();
+  return;
+
+  const group = { id: groupId };
+  const existingPatient = true;
 
   if (!existingPatient) {
     await prisma.patient.create({
       data: {
         name: "Wilfredo Rivas Flores",
         age: 67,
+        dni: "0801-1958-03714",
+        clinicalSummary:
+          "Insuficiencia cardiaca por miocardiopatía dilatada isquémica (FE ~30% en estudios previos) con riesgo cardiovascular alto (antecedentes de infarto/arritmias). Deterioro cognitivo / demencia vascular con crisis vespertino-nocturna (agitación, paranoia, llanto, confusión, insomnio). Comorbilidades: hipotiroidismo y prediabetes.",
+        criticalMedications:
+          "1. Anticoagulante: Apixabán/Eliquis 5 mg (riesgo de sangrado).\n2. Conducta/sueño: aripiprazol (Ilimit), olanzapina (Olexa), eszopiclona (Neogaibal).",
+        emergencyAlerts:
+          "1. Dolor en el pecho, falta de aire, desmayo o presión muy baja.\n2. Debilidad de un lado, habla rara, convulsión/rigidez, confusión súbita.\n3. Somnolencia excesiva (no despierta bien).\n4. Caída o golpe (especialmente en cabeza) por uso de anticoagulante.\n5. No orina 8–10 horas o quiere orinar y no puede.",
+        triageMessage:
+          "Paciente 67 años con insuficiencia cardiaca (FE ~30%), demencia vascular y en anticoagulante (apixabán). Síntoma: ____ desde hora: ____.",
+        emergencyContacts:
+          "1. Daniel Rivas - 3152-8281\n2. Olga Zelaya - 8829-7623\n3. Jimmy Rivas - 3270-4422",
         groupId: group.id,
       },
     });
+
+    refresh();
   }
+}
+
+export async function updatePatient(formData: FormData) {
+  await requirePermission("manage_family_workspace");
+
+  const patientId = ((formData.get("patientId") as string) || "").trim();
+  const name = ((formData.get("name") as string) || "").trim();
+  const ageValue = ((formData.get("age") as string) || "").trim();
+  const groupId = ((formData.get("groupId") as string) || "").trim();
+  const dni = ((formData.get("dni") as string) || "").trim();
+  const clinicalSummary = ((formData.get("clinicalSummary") as string) || "").trim();
+  const criticalMedications = ((formData.get("criticalMedications") as string) || "").trim();
+  const emergencyAlerts = ((formData.get("emergencyAlerts") as string) || "").trim();
+  const triageMessage = ((formData.get("triageMessage") as string) || "").trim();
+  const emergencyContacts = ((formData.get("emergencyContacts") as string) || "").trim();
+
+  const age = Number.parseInt(ageValue, 10);
+
+  if (!patientId || !name || !groupId || Number.isNaN(age) || age < 0) {
+    return;
+  }
+
+  await prisma.patient.update({
+    where: {
+      id: patientId,
+    },
+    data: {
+      name,
+      age,
+      groupId,
+      dni: dni || null,
+      clinicalSummary: clinicalSummary || null,
+      criticalMedications: criticalMedications || null,
+      emergencyAlerts: emergencyAlerts || null,
+      triageMessage: triageMessage || null,
+      emergencyContacts: emergencyContacts || null,
+    },
+  });
+
+  refresh();
 }
 
 export async function addUserToGroup(formData: FormData) {
   await requirePermission("manage_family_workspace");
 
-  const userId = formData.get("userId") as string;
-  const groupId = formData.get("groupId") as string;
+  const userId = ((formData.get("userId") as string) || "").trim();
+  const groupId = ((formData.get("groupId") as string) || "").trim();
   const role = normalizeAppRole(
     (formData.get("role") as string) || "FAMILIAR_LECTURA"
   );
@@ -88,19 +192,59 @@ export async function addUserToGroup(formData: FormData) {
   const existing = await prisma.groupMember.findFirst({
     where: {
       userId,
-      groupId,
     },
   });
 
-  if (!existing) {
-    await prisma.groupMember.create({
+  if (existing) {
+    await prisma.groupMember.update({
+      where: {
+        id: existing.id,
+      },
       data: {
-        userId,
         groupId,
         role,
       },
     });
+
+    refresh();
+    return;
   }
+
+  await prisma.groupMember.create({
+    data: {
+      userId,
+      groupId,
+      role,
+    },
+  });
+
+  refresh();
+}
+
+export async function updateGroupMember(formData: FormData) {
+  await requirePermission("manage_family_workspace");
+
+  const memberId = ((formData.get("memberId") as string) || "").trim();
+  const groupId = ((formData.get("groupId") as string) || "").trim();
+  const role = normalizeAppRole(
+    (formData.get("role") as string) || "FAMILIAR_LECTURA"
+  );
+
+  if (!memberId || !groupId) {
+    return;
+  }
+
+  await prisma.groupMember.update({
+    where: {
+      id: memberId,
+    },
+    data: {
+      groupId,
+      role,
+    },
+  });
+
+  refresh();
 }
 
 export async function createTask(formData: FormData) {
@@ -245,6 +389,7 @@ export async function createMedicationInventoryItem(
         notes: notes || null,
       },
     });
+    refresh();
 
     return {
       status: "success",
@@ -263,12 +408,72 @@ export async function createMedicationInventoryItem(
       patientId,
     },
   });
+  refresh();
 
   return {
     status: "success",
     message: "Inventario creado correctamente.",
     errors: {},
   };
+}
+
+export async function updateMedicationInventoryItem(formData: FormData) {
+  await requirePermission("update_medication_inventory");
+
+  const inventoryItemId = ((formData.get("inventoryItemId") as string) || "").trim();
+  const medicationName = ((formData.get("medicationName") as string) || "").trim();
+  const unitValue = (formData.get("unit") as string) || "";
+  const currentStockValue = ((formData.get("currentStock") as string) || "").trim();
+  const minimumStockValue = ((formData.get("minimumStock") as string) || "").trim();
+  const notes = ((formData.get("notes") as string) || "").trim();
+  const patientId = ((formData.get("patientId") as string) || "").trim();
+  const unit = normalizeMedicationUnit(unitValue);
+
+  if (!inventoryItemId || !medicationName || !patientId || !unit) {
+    return;
+  }
+
+  const currentStock = Number.parseFloat(currentStockValue);
+  const minimumStock = Number.parseFloat(minimumStockValue);
+
+  if (
+    Number.isNaN(currentStock) ||
+    currentStock < 0 ||
+    Number.isNaN(minimumStock) ||
+    minimumStock < 0
+  ) {
+    return;
+  }
+
+  const duplicate = await prisma.medicationInventory.findFirst({
+    where: {
+      patientId,
+      medicationName,
+      NOT: {
+        id: inventoryItemId,
+      },
+    },
+  });
+
+  if (duplicate) {
+    return;
+  }
+
+  await prisma.medicationInventory.update({
+    where: {
+      id: inventoryItemId,
+    },
+    data: {
+      medicationName,
+      patientId,
+      unit,
+      currentStock,
+      minimumStock,
+      notes: notes || null,
+    },
+  });
+
+  refresh();
 }
 
 export async function createVitalSignRecord(

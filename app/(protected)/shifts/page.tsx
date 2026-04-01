@@ -14,7 +14,8 @@ import {
   formatShiftDateTime,
   formatShiftDay,
   formatShiftTime,
-  getShiftDateTimeInputValue,
+  getShiftDateInputValue,
+  getShiftTimeInputValue,
   getWeekDays,
   getWeekRange,
   parseWeekStart,
@@ -195,28 +196,41 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
             </div>
 
             <div>
-              <label className="mb-1 block text-sm text-white/75">Inicio</label>
+              <label className="mb-1 block text-sm text-white/75">Fecha</label>
               <input
-                name="startAt"
-                type="datetime-local"
-                defaultValue={getShiftDateTimeInputValue(weekStart)}
+                name="shiftDate"
+                type="date"
+                defaultValue={getShiftDateInputValue(weekStart)}
                 className="w-full rounded border border-white/20 bg-black px-3 py-2"
                 required
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-sm text-white/75">Fin</label>
+              <label className="mb-1 block text-sm text-white/75">Hora de inicio</label>
               <input
-                name="endAt"
-                type="datetime-local"
-                defaultValue={getShiftDateTimeInputValue(new Date(weekStart.getTime() + 8 * 60 * 60 * 1000))}
+                name="startTime"
+                type="time"
+                defaultValue={getShiftTimeInputValue(weekStart)}
                 className="w-full rounded border border-white/20 bg-black px-3 py-2"
                 required
               />
             </div>
 
             <div>
+              <label className="mb-1 block text-sm text-white/75">Hora de fin</label>
+              <input
+                name="endTime"
+                type="time"
+                defaultValue={getShiftTimeInputValue(
+                  new Date(weekStart.getTime() + 8 * 60 * 60 * 1000)
+                )}
+                className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                required
+              />
+            </div>
+
+            <div className="lg:col-span-4">
               <label className="mb-1 block text-sm text-white/75">Notas</label>
               <input
                 name="notes"
@@ -227,6 +241,9 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
             </div>
 
             <div className="lg:col-span-5">
+              <p className="mb-3 text-sm text-white/60">
+                Si la hora de fin es menor que la de inicio, el turno se guardará para el día siguiente.
+              </p>
               <button
                 type="submit"
                 className="rounded bg-white px-4 py-2 text-black"
@@ -322,23 +339,38 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
                                     <option value="APOYO_DOMESTICO">Apoyo doméstico</option>
                                   </select>
                                 </div>
-                                <div>
-                                  <label className="mb-1 block text-sm text-white/75">Inicio</label>
-                                  <input
-                                    name="startAt"
-                                    type="datetime-local"
-                                    defaultValue={getShiftDateTimeInputValue(shift.startAt)}
-                                    className="w-full rounded border border-white/20 bg-black px-3 py-2"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="mb-1 block text-sm text-white/75">Fin</label>
-                                  <input
-                                    name="endAt"
-                                    type="datetime-local"
-                                    defaultValue={getShiftDateTimeInputValue(shift.endAt)}
-                                    className="w-full rounded border border-white/20 bg-black px-3 py-2"
-                                  />
+                                <div className="grid gap-3 md:grid-cols-3">
+                                  <div>
+                                    <label className="mb-1 block text-sm text-white/75">Fecha</label>
+                                    <input
+                                      name="shiftDate"
+                                      type="date"
+                                      defaultValue={getShiftDateInputValue(shift.startAt)}
+                                      className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="mb-1 block text-sm text-white/75">
+                                      Hora de inicio
+                                    </label>
+                                    <input
+                                      name="startTime"
+                                      type="time"
+                                      defaultValue={getShiftTimeInputValue(shift.startAt)}
+                                      className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="mb-1 block text-sm text-white/75">
+                                      Hora de fin
+                                    </label>
+                                    <input
+                                      name="endTime"
+                                      type="time"
+                                      defaultValue={getShiftTimeInputValue(shift.endAt)}
+                                      className="w-full rounded border border-white/20 bg-black px-3 py-2"
+                                    />
+                                  </div>
                                 </div>
                                 <div>
                                   <label className="mb-1 block text-sm text-white/75">Notas</label>
@@ -349,13 +381,16 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
                                     className="w-full rounded border border-white/20 bg-black px-3 py-2"
                                   />
                                 </div>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap items-center gap-2">
                                   <button
                                     type="submit"
                                     className="rounded bg-white px-3 py-2 text-sm text-black"
                                   >
                                     Guardar cambios
                                   </button>
+                                  <p className="text-sm text-white/55">
+                                    Si la hora de fin es menor que la de inicio, el turno se interpreta como nocturno.
+                                  </p>
                                 </div>
                               </form>
                               <form action={deletePlannedShift} className="mt-2">
