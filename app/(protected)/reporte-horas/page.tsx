@@ -25,6 +25,26 @@ type ReportUserItem = {
   role: string;
 };
 
+type AttendanceRecordItem = {
+  id: string;
+  userId: string;
+  startedAt: Date;
+  endedAt: Date | null;
+  notes: string | null;
+  user: {
+    id: string;
+    name: string;
+    role: string;
+  };
+  plannedShift: {
+    id: string;
+    startAt: Date;
+    endAt: Date;
+    role: string;
+    notes: string | null;
+  } | null;
+};
+
 type WorkedHoursSummaryItem = {
   userId: string;
   name: string;
@@ -135,6 +155,7 @@ export default async function WorkedHoursReportPage({
     }),
   ]);
   const typedUsers = users as ReportUserItem[];
+  const typedAttendanceRecords = attendanceRecords as AttendanceRecordItem[];
 
   const selectedUser =
     typedUsers.find((user) => user.id === requestedUserId) ?? null;
@@ -143,10 +164,10 @@ export default async function WorkedHoursReportPage({
     : "Todos";
 
   const summaryByUser: Record<string, WorkedHoursSummaryItem> =
-    attendanceRecords.reduce(
+    typedAttendanceRecords.reduce(
       (
         accumulator: Record<string, WorkedHoursSummaryItem>,
-        record
+        record: AttendanceRecordItem
       ) => {
     if (!record.endedAt) {
       return accumulator;
@@ -362,7 +383,7 @@ export default async function WorkedHoursReportPage({
 
         <div className="space-y-3">
           {attendanceRecords.length > 0 ? (
-            attendanceRecords.map((record) => (
+            typedAttendanceRecords.map((record) => (
               <article
                 key={record.id}
                 className="rounded-xl border border-white/10 bg-black/20 p-4 print:border-black/10 print:bg-white"
