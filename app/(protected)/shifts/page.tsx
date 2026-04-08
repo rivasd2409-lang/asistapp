@@ -33,6 +33,41 @@ type ShiftsPageProps = {
   }>;
 };
 
+type ShiftUserItem = {
+  id: string;
+  name: string;
+  role: string;
+};
+
+type PlannedShiftItem = {
+  id: string;
+  userId: string;
+  role: string;
+  startAt: Date;
+  endAt: Date;
+  notes: string | null;
+  user: ShiftUserItem;
+};
+
+type AttendanceItem = {
+  id: string;
+  userId: string;
+  plannedShiftId: string | null;
+  startedAt: Date;
+  endedAt: Date | null;
+  notes: string | null;
+  user: ShiftUserItem;
+  plannedShift: {
+    id: string;
+    userId: string;
+    role: string;
+    startAt: Date;
+    endAt: Date;
+    notes: string | null;
+    user: ShiftUserItem;
+  } | null;
+};
+
 function getSingleSearchParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -126,6 +161,9 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
           })
         : Promise.resolve(null),
     ]);
+  const typedStaffUsers = staffUsers as ShiftUserItem[];
+  const typedPlannedShifts = plannedShifts as PlannedShiftItem[];
+  const typedAttendanceRecords = attendanceRecords as AttendanceItem[];
 
   return (
     <section className="space-y-6">
@@ -175,7 +213,7 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
                 <option value="" disabled>
                   Selecciona un colaborador
                 </option>
-                {staffUsers.map((user) => (
+                {typedStaffUsers.map((user) => (
                   <option key={user.id} value={user.id}>
                     {user.name} - {APP_ROLE_LABELS[normalizeAppRole(user.role)]}
                   </option>
@@ -265,7 +303,7 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-7">
           {weekDays.map((day) => {
-            const dayShifts = plannedShifts.filter((shift) =>
+            const dayShifts = typedPlannedShifts.filter((shift) =>
               sameDay(shift.startAt, day)
             );
 
@@ -321,7 +359,7 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
                                     defaultValue={shift.userId}
                                     className="w-full rounded border border-white/20 bg-black px-3 py-2"
                                   >
-                                    {staffUsers.map((user) => (
+                                    {typedStaffUsers.map((user) => (
                                       <option key={user.id} value={user.id}>
                                         {user.name} - {APP_ROLE_LABELS[normalizeAppRole(user.role)]}
                                       </option>
@@ -464,7 +502,7 @@ export default async function ShiftsPage({ searchParams }: ShiftsPageProps) {
 
         <div className="space-y-2">
           {attendanceRecords.length > 0 ? (
-            attendanceRecords.map((attendance) => (
+            typedAttendanceRecords.map((attendance) => (
               <div
                 key={attendance.id}
                 className="rounded-xl border border-white/10 bg-black/20 p-4"
