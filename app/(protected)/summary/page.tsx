@@ -8,6 +8,44 @@ type SummaryPageProps = {
   }>;
 };
 
+type SummaryPatientItem = {
+  id: string;
+  name: string;
+};
+
+type SummaryTaskItem = {
+  id: string;
+  title: string;
+  status: string;
+  category: string;
+  patientId: string;
+  medicationName: string | null;
+  dueDate: string | null;
+  completedAt: string | null;
+  patient: {
+    name: string;
+  };
+};
+
+type SummaryVitalSignItem = {
+  id: string;
+  patientId: string;
+  type: string;
+  value: string;
+  unit: string;
+  notes: string | null;
+  recordedAt: string;
+};
+
+type SummaryInventoryItem = {
+  id: string;
+  patientId: string;
+  medicationName: string;
+  currentStock: number;
+  minimumStock: number;
+  displayUnit: string;
+};
+
 function getSingleSearchParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -60,14 +98,18 @@ export default async function SummaryPage({ searchParams }: SummaryPageProps) {
   const params = await searchParams;
   const requestedPatientId = getSingleSearchParam(params.patientId);
   const requestedDate = getSingleSearchParam(params.date) ?? getTodayInputValue();
+  const patients = data.patients as SummaryPatientItem[];
+  const tasks = data.tasks as SummaryTaskItem[];
+  const vitalSignsData = data.vitalSigns as SummaryVitalSignItem[];
+  const inventoryItems = data.inventoryItems as SummaryInventoryItem[];
   const selectedPatient =
-    data.patients.find((patient) => patient.id === requestedPatientId) ??
-    data.patients[0] ??
+    patients.find((patient) => patient.id === requestedPatientId) ??
+    patients[0] ??
     null;
   const selectedPatientId = selectedPatient?.id ?? "";
   const { start, end } = getDayRange(requestedDate);
 
-  const patientTasks = data.tasks.filter((task) => task.patientId === selectedPatientId);
+  const patientTasks = tasks.filter((task) => task.patientId === selectedPatientId);
   const completedTasks = patientTasks.filter(
     (task) =>
       task.status === "COMPLETED" &&
@@ -82,12 +124,12 @@ export default async function SummaryPage({ searchParams }: SummaryPageProps) {
   const completedMedicationTasks = completedTasks.filter(
     (task) => task.category === "MEDICATION"
   );
-  const vitalSigns = data.vitalSigns.filter(
+  const vitalSigns = vitalSignsData.filter(
     (record) =>
       record.patientId === selectedPatientId &&
       isWithinRange(record.recordedAt, start, end)
   );
-  const patientInventoryItems = data.inventoryItems.filter(
+  const patientInventoryItems = inventoryItems.filter(
     (item) => item.patientId === selectedPatientId
   );
   const alerts = buildAttentionAlerts({
@@ -115,7 +157,7 @@ export default async function SummaryPage({ searchParams }: SummaryPageProps) {
               defaultValue={selectedPatientId}
               className="w-full rounded border border-white/20 bg-black px-3 py-2"
             >
-              {data.patients.map((patient) => (
+              {patients.map((patient) => (
                 <option key={patient.id} value={patient.id}>
                   {patient.name}
                 </option>
