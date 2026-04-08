@@ -1,6 +1,7 @@
 'use server';
 
 import { refresh } from "next/cache";
+import { type Prisma } from "@prisma/client";
 
 import { hashPassword, requireCurrentUser, requirePermission } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -77,7 +78,7 @@ export async function createManagedUser(
 
   const passwordHash = hashPassword(password);
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const createdUser = await tx.user.create({
       data: {
         name,
@@ -152,7 +153,7 @@ export async function updateManagedUser(formData: FormData) {
     }
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.user.update({
       where: { id: userId },
       data: {
