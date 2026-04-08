@@ -14,6 +14,111 @@ type CurrentUserGroupMembership = {
   groupId: string;
 };
 
+type AppDataPatientItem = {
+  id: string;
+  name: string;
+  age: number;
+  dni: string | null;
+  clinicalSummary: string | null;
+  criticalMedications: string | null;
+  emergencyAlerts: string | null;
+  triageMessage: string | null;
+  emergencyContacts: string | null;
+  groupId: string;
+  createdAt: Date;
+  group: {
+    id: string;
+    name: string;
+    createdAt: Date;
+  } | null;
+};
+
+type AppDataMemberItem = {
+  id: string;
+  userId: string;
+  groupId: string;
+  role: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    isActive: boolean;
+  };
+  group: {
+    id: string;
+    name: string;
+    createdAt: Date;
+  };
+};
+
+type AppDataTaskItem = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  category: string;
+  medicationName: string | null;
+  dosage: string | null;
+  doseAmount: number | null;
+  doseUnit: string | null;
+  instructions: string | null;
+  dueDate: Date | null;
+  recurrenceType: string;
+  recurrenceInterval: number | null;
+  recurrenceUnit: string | null;
+  completedAt: Date | null;
+  patientId: string;
+  assignedMemberId: string | null;
+  createdAt: Date;
+  patient: {
+    id: string;
+    name: string;
+  };
+  assignedMember: {
+    id: string;
+    user: {
+      name: string;
+    };
+  } | null;
+  completedByMember: {
+    id: string;
+    user: {
+      name: string;
+    };
+  } | null;
+};
+
+type AppDataInventoryItem = {
+  id: string;
+  medicationName: string;
+  unit: string;
+  currentStock: number;
+  minimumStock: number;
+  notes: string | null;
+  patientId: string;
+  createdAt: Date;
+  patient: {
+    id: string;
+    name: string;
+  };
+};
+
+type AppDataVitalSignItem = {
+  id: string;
+  patientId: string;
+  type: string;
+  value: string;
+  unit: string;
+  notes: string | null;
+  recordedAt: Date;
+  createdAt: Date;
+  patient: {
+    id: string;
+    name: string;
+  };
+};
+
 export async function getAppData() {
   const currentUser = await getCurrentUser();
   const now = new Date();
@@ -136,8 +241,13 @@ export async function getAppData() {
         },
       }),
     ]);
+  const typedPatients = patients as AppDataPatientItem[];
+  const typedMembers = members as AppDataMemberItem[];
+  const typedTasks = tasks as AppDataTaskItem[];
+  const typedInventoryItems = inventoryItems as AppDataInventoryItem[];
+  const typedVitalSigns = vitalSigns as AppDataVitalSignItem[];
 
-  const normalizedPatients = patients.map((patient) => ({
+  const normalizedPatients = typedPatients.map((patient: AppDataPatientItem) => ({
     ...patient,
     createdAt: patient.createdAt.toISOString(),
     group: patient.group
@@ -149,7 +259,7 @@ export async function getAppData() {
       : null,
   }));
 
-  const normalizedTasks = tasks.map((task) => ({
+  const normalizedTasks = typedTasks.map((task: AppDataTaskItem) => ({
     ...task,
     dueDate: task.dueDate?.toISOString() ?? null,
     completedAt: task.completedAt?.toISOString() ?? null,
@@ -160,12 +270,12 @@ export async function getAppData() {
     status: normalizeTaskStatus(task.status),
   }));
 
-  const normalizedInventoryItems = inventoryItems.map((item) => ({
+  const normalizedInventoryItems = typedInventoryItems.map((item: AppDataInventoryItem) => ({
     ...item,
     displayUnit: normalizeMedicationUnit(item.unit) ?? "TABLET",
   }));
 
-  const normalizedVitalSigns = vitalSigns.map((record) => ({
+  const normalizedVitalSigns = typedVitalSigns.map((record: AppDataVitalSignItem) => ({
     ...record,
     type: normalizeVitalSignType(record.type),
     recordedAt: record.recordedAt.toISOString(),
@@ -212,7 +322,7 @@ export async function getAppData() {
     : normalizedVitalSigns;
   const filteredMembers = canManageFamilyWorkspace
     ? members
-    : members.filter((member) => member.userId === currentUser?.id);
+    : typedMembers.filter((member: AppDataMemberItem) => member.userId === currentUser?.id);
 
   const attentionAlerts = buildAttentionAlerts({
     now,
