@@ -6,6 +6,23 @@ import { prisma } from "@/lib/db";
 import { requireCurrentUser } from "@/lib/auth";
 import { APP_ROLES, APP_ROLE_LABELS, normalizeAppRole } from "@/lib/roles";
 
+type ManagedGroupItem = {
+  id: string;
+  name: string;
+};
+
+type ManagedUserItem = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  groupMembers: Array<{
+    id: string;
+    group: ManagedGroupItem;
+  }>;
+};
+
 export default async function UsersPage() {
   const viewer = await requireCurrentUser();
 
@@ -32,6 +49,8 @@ export default async function UsersPage() {
       },
     }),
   ]);
+  const typedUsers = users as ManagedUserItem[];
+  const typedGroups = groups as ManagedGroupItem[];
 
   return (
     <section className="space-y-6">
@@ -44,7 +63,7 @@ export default async function UsersPage() {
 
       <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
         <h2 className="mb-4 text-lg font-semibold">Crear colaborador</h2>
-        <UserManagementForm action={createManagedUser} groups={groups} />
+        <UserManagementForm action={createManagedUser} groups={typedGroups} />
       </section>
 
       <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
@@ -56,7 +75,7 @@ export default async function UsersPage() {
         </div>
 
         <div className="space-y-3">
-          {users.map((user) => (
+          {typedUsers.map((user) => (
             <article
               key={user.id}
               className="rounded-2xl border border-white/10 bg-black/20 p-4"
@@ -80,7 +99,9 @@ export default async function UsersPage() {
                     </span>
                     <span className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-white/70">
                       {user.groupMembers.length > 0
-                        ? `Grupos: ${user.groupMembers.map((member) => member.group.name).join(", ")}`
+                        ? `Grupos: ${user.groupMembers
+                            .map((member: { group: ManagedGroupItem }) => member.group.name)
+                            .join(", ")}`
                         : "Sin grupo vinculado"}
                     </span>
                   </div>
