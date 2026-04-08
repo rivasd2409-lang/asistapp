@@ -49,6 +49,7 @@ export default async function MyShiftPage() {
 
   const now = new Date();
   const { start: todayStart, end: todayEnd } = getTodayRange(now);
+
   const currentUserGroupMemberships = await prisma.groupMember.findMany({
     where: {
       userId: viewer.id,
@@ -57,10 +58,9 @@ export default async function MyShiftPage() {
       groupId: true,
     },
   });
+
   const currentUserGroupIds = currentUserGroupMemberships.map(
-  (membership: typeof currentUserGroupMemberships[number]) => membership.groupId
-);
-    (membership) => membership.groupId
+    (membership: typeof currentUserGroupMemberships[number]) => membership.groupId
   );
 
   const [activeAttendance, todayPlannedShift, nextPlannedShift, visibleTasks] =
@@ -156,47 +156,51 @@ export default async function MyShiftPage() {
           }
         : null;
 
-  const operationalTasks = visibleTasks.filter((task) => {
-    if (task.status === "COMPLETED") {
+  const operationalTasks = visibleTasks.filter(
+    (task: typeof visibleTasks[number]) => {
+      if (task.status === "COMPLETED") {
+        return (
+          isWithinRange(task.completedAt, todayStart, todayEnd) ||
+          (shiftWindow
+            ? isWithinRange(task.completedAt, shiftWindow.start, shiftWindow.end)
+            : false)
+        );
+      }
+
+      if (!task.dueDate) {
+        return false;
+      }
+
       return (
-        isWithinRange(task.completedAt, todayStart, todayEnd) ||
+        task.dueDate < now ||
+        isWithinRange(task.dueDate, todayStart, todayEnd) ||
         (shiftWindow
-          ? isWithinRange(task.completedAt, shiftWindow.start, shiftWindow.end)
+          ? isWithinRange(task.dueDate, shiftWindow.start, shiftWindow.end)
           : false)
       );
     }
+  );
 
-    if (!task.dueDate) {
-      return false;
+  const personalTasks = operationalTasks.map(
+    (task: typeof operationalTasks[number]) => {
+      const category = normalizeTaskCategory(task.category);
+
+      return {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        status: normalizeTaskStatus(task.status),
+        dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+        completedAt: task.completedAt ? task.completedAt.toISOString() : null,
+        patient: {
+          id: task.patient.id,
+          name: task.patient.name,
+        },
+        categoryLabel: TASK_CATEGORY_LABELS[category],
+        isShared: !task.assignedMemberId,
+      };
     }
-
-    return (
-      task.dueDate < now ||
-      isWithinRange(task.dueDate, todayStart, todayEnd) ||
-      (shiftWindow
-        ? isWithinRange(task.dueDate, shiftWindow.start, shiftWindow.end)
-        : false)
-    );
-  });
-
-  const personalTasks = operationalTasks.map((task) => {
-    const category = normalizeTaskCategory(task.category);
-
-    return {
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      status: normalizeTaskStatus(task.status),
-      dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-      completedAt: task.completedAt ? task.completedAt.toISOString() : null,
-      patient: {
-        id: task.patient.id,
-        name: task.patient.name,
-      },
-      categoryLabel: TASK_CATEGORY_LABELS[category],
-      isShared: !task.assignedMemberId,
-    };
-  });
+  );
 
   const hasTodayPlannedShift = Boolean(todayPlannedShift);
 
@@ -206,7 +210,8 @@ export default async function MyShiftPage() {
         <div>
           <h1 className="text-2xl font-bold">Mi turno</h1>
           <p className="mt-2 text-white/65">
-            Revisa tu estado operativo del día, tus próximos turnos y las tareas más importantes.
+            Revisa tu estado operativo del día, tus próximos turnos y las tareas
+            más importantes.
           </p>
         </div>
 
@@ -268,17 +273,27 @@ export default async function MyShiftPage() {
                 <p className="mt-3 text-sm text-white/60">Turno planificado</p>
                 <p className="mt-1 text-sm text-white/85">
                   {activeAttendance.plannedShift
-                    ? `${formatShiftTime(activeAttendance.plannedShift.startAt)} - ${formatShiftTime(activeAttendance.plannedShift.endAt)}`
+                    ? `${formatShiftTime(
+                        activeAttendance.plannedShift.startAt
+                      )} - ${formatShiftTime(
+                        activeAttendance.plannedShift.endAt
+                      )}`
                     : "Sin turno planificado vinculado"}
                 </p>
-                <p className="mt-3 text-sm text-white/60">Tiempo transcurrido</p>
+                <p className="mt-3 text-sm text-white/60">
+                  Tiempo transcurrido
+                </p>
                 <p className="mt-1 text-sm font-medium text-emerald-200">
                   {formatElapsedTime(activeAttendance.startedAt, now)}
                 </p>
               </div>
 
               <form action={endShiftAttendance}>
-                <input type="hidden" name="attendanceId" value={activeAttendance.id} />
+                <input
+                  type="hidden"
+                  name="attendanceId"
+                  value={activeAttendance.id}
+                />
                 <button
                   type="submit"
                   className="rounded bg-white px-4 py-2 text-black"
@@ -292,7 +307,8 @@ export default async function MyShiftPage() {
               <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-4">
                 <p className="text-sm text-white/60">Horario de hoy</p>
                 <p className="mt-1 text-lg font-semibold text-white">
-                  {formatShiftTime(todayPlannedShift.startAt)} - {formatShiftTime(todayPlannedShift.endAt)}
+                  {formatShiftTime(todayPlannedShift.startAt)} -{" "}
+                  {formatShiftTime(todayPlannedShift.endAt)}
                 </p>
                 <p className="mt-3 text-sm text-white/60">Inicio programado</p>
                 <p className="mt-1 text-sm text-white/85">
@@ -335,7 +351,8 @@ export default async function MyShiftPage() {
               </p>
               <p className="mt-3 text-sm text-white/60">Horario</p>
               <p className="mt-1 text-sm text-white/85">
-                {formatShiftTime(nextPlannedShift.startAt)} - {formatShiftTime(nextPlannedShift.endAt)}
+                {formatShiftTime(nextPlannedShift.startAt)} -{" "}
+                {formatShiftTime(nextPlannedShift.endAt)}
               </p>
               <p className="mt-3 text-sm text-white/60">Notas</p>
               <p className="mt-1 text-sm text-white/85">
@@ -354,7 +371,8 @@ export default async function MyShiftPage() {
         <div>
           <h2 className="text-xl font-semibold">Mis tareas</h2>
           <p className="text-sm text-white/60">
-            Solo se muestran tareas del día, del turno actual o tareas vencidas pendientes de resolver.
+            Solo se muestran tareas del día, del turno actual o tareas vencidas
+            pendientes de resolver.
           </p>
         </div>
 
