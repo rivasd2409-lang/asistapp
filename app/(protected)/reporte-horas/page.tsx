@@ -25,6 +25,14 @@ type ReportUserItem = {
   role: string;
 };
 
+type WorkedHoursSummaryItem = {
+  userId: string;
+  name: string;
+  roleLabel: string;
+  totalHours: number;
+  shiftCount: number;
+};
+
 function getSingleSearchParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -134,18 +142,8 @@ export default async function WorkedHoursReportPage({
     ? APP_ROLE_LABELS[normalizeAppRole(requestedRole)]
     : "Todos";
 
-  const summaryByUser = attendanceRecords.reduce<
-    Record<
-      string,
-      {
-        userId: string;
-        name: string;
-        roleLabel: string;
-        totalHours: number;
-        shiftCount: number;
-      }
-    >
-  >((accumulator, record) => {
+  const summaryByUser: Record<string, WorkedHoursSummaryItem> =
+    attendanceRecords.reduce((accumulator, record) => {
     if (!record.endedAt) {
       return accumulator;
     }
@@ -169,7 +167,7 @@ export default async function WorkedHoursReportPage({
     };
 
     return accumulator;
-  }, {});
+  }, {} as Record<string, WorkedHoursSummaryItem>);
 
   const summaryItems = Object.values(summaryByUser).sort((left, right) => {
     if (right.totalHours !== left.totalHours) {
