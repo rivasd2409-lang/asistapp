@@ -1,6 +1,7 @@
 'use server';
 
 import { refresh } from "next/cache";
+import { type Prisma } from "@prisma/client";
 
 import { prisma } from "@/lib/db";
 import { requireCurrentUser } from "@/lib/auth";
@@ -34,7 +35,7 @@ export async function updateTaskStatus(
     throw new Error("Invalid task status update.");
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const currentTask = await tx.task.findUnique({
       where: { id: taskId },
       include: {
