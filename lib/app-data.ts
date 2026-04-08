@@ -9,6 +9,11 @@ import { normalizeVitalSignType } from "@/app/vital-signs";
 import { buildAttentionAlerts, buildNotificationItems } from "./attention";
 import { hasPermission, isAssignedCareRole } from "./roles";
 
+type CurrentUserGroupMembership = {
+  id: string;
+  groupId: string;
+};
+
 export async function getAppData() {
   const currentUser = await getCurrentUser();
   const now = new Date();
@@ -30,8 +35,10 @@ export async function getAppData() {
         },
       })
     : [];
-  const currentUserGroupIds = currentUserGroupMemberships.map(
-    (membership) => membership.groupId
+  const typedCurrentUserGroupMemberships =
+    currentUserGroupMemberships as CurrentUserGroupMembership[];
+  const currentUserGroupIds = typedCurrentUserGroupMemberships.map(
+    (membership: CurrentUserGroupMembership) => membership.groupId
   );
   const taskScopeWhere =
     isCareRole && currentUser
