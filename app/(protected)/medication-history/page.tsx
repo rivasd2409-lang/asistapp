@@ -46,10 +46,14 @@ export default async function MedicationHistoryPage({
 
   const requestedPatientId = getSingleSearchParam(params.patientId);
   const requestedDate = getSingleSearchParam(params.date) ?? getTodayInputValue();
+
   const selectedPatient =
-    patients.find((patient) => patient.id === requestedPatientId) ??
+    patients.find(
+      (patient: typeof patients[number]) => patient.id === requestedPatientId
+    ) ??
     patients[0] ??
     null;
+
   const selectedPatientId = selectedPatient?.id ?? "";
   const { start, end } = getDayRange(requestedDate);
 
@@ -102,7 +106,7 @@ export default async function MedicationHistoryPage({
               defaultValue={selectedPatientId}
               className="w-full rounded border border-white/20 bg-black px-3 py-2"
             >
-              {patients.map((patient) => (
+              {patients.map((patient: typeof patients[number]) => (
                 <option key={patient.id} value={patient.id}>
                   {patient.name}
                 </option>
@@ -168,7 +172,8 @@ export default async function MedicationHistoryPage({
                 </div>
 
                 <p className="mt-2 rounded border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/75">
-                  Registrado por: {record.recordedByMember?.user.name || "Sin registrar"}
+                  Registrado por:{" "}
+                  {record.recordedByMember?.user.name || "Sin registrar"}
                 </p>
 
                 {record.notes ? (
