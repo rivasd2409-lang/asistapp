@@ -58,6 +58,8 @@ export default async function MyShiftPage() {
     },
   });
   const currentUserGroupIds = currentUserGroupMemberships.map(
+  (membership: typeof currentUserGroupMemberships[number]) => membership.groupId
+);
     (membership) => membership.groupId
   );
 
