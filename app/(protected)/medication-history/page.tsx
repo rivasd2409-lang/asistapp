@@ -143,7 +143,7 @@ export default async function MedicationHistoryPage({
 
         <div className="space-y-2">
           {records.length > 0 ? (
-            records.map((record) => (
+            records.map((record: typeof records[number]) => (
               <div
                 key={record.id}
                 className="rounded-2xl border border-white/10 bg-black/20 p-4"
