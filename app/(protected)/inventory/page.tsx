@@ -53,7 +53,7 @@ export default async function InventoryPage() {
         </div>
 
         <div className="space-y-2">
-          {data.inventoryItems.map((item) => {
+          {data.inventoryItems.map((item: typeof data.inventoryItems[number]) => {
             const isLowStock = item.currentStock <= item.minimumStock;
 
             return (
