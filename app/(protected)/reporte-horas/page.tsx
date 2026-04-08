@@ -19,6 +19,12 @@ type WorkedHoursPageProps = {
   }>;
 };
 
+type ReportUserItem = {
+  id: string;
+  name: string;
+  role: string;
+};
+
 function getSingleSearchParam(value?: string | string[]) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -120,9 +126,10 @@ export default async function WorkedHoursReportPage({
       },
     }),
   ]);
+  const typedUsers = users as ReportUserItem[];
 
   const selectedUser =
-    users.find((user) => user.id === requestedUserId) ?? null;
+    typedUsers.find((user) => user.id === requestedUserId) ?? null;
   const selectedRoleLabel = requestedRole
     ? APP_ROLE_LABELS[normalizeAppRole(requestedRole)]
     : "Todos";
@@ -245,7 +252,7 @@ export default async function WorkedHoursReportPage({
               className="w-full rounded border border-white/20 bg-black px-3 py-2"
             >
               <option value="">Todos</option>
-              {users.map((user) => (
+              {typedUsers.map((user) => (
                 <option key={user.id} value={user.id}>
                   {user.name}
                 </option>
