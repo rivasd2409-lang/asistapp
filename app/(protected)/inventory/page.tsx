@@ -117,6 +117,10 @@ export default async function InventoryPage() {
                                 {patient.name}
                               </option>
                             ))}
+                              <option key={patient.id} value={patient.id}>
+                                {patient.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                       </div>
