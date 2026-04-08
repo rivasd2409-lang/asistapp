@@ -143,7 +143,11 @@ export default async function WorkedHoursReportPage({
     : "Todos";
 
   const summaryByUser: Record<string, WorkedHoursSummaryItem> =
-    attendanceRecords.reduce((accumulator, record) => {
+    attendanceRecords.reduce(
+      (
+        accumulator: Record<string, WorkedHoursSummaryItem>,
+        record
+      ) => {
     if (!record.endedAt) {
       return accumulator;
     }
@@ -167,7 +171,9 @@ export default async function WorkedHoursReportPage({
     };
 
     return accumulator;
-  }, {} as Record<string, WorkedHoursSummaryItem>);
+      },
+      {} as Record<string, WorkedHoursSummaryItem>
+    );
 
   const summaryItems = Object.values(summaryByUser).sort((left, right) => {
     if (right.totalHours !== left.totalHours) {
