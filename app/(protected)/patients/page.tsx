@@ -14,6 +14,40 @@ import {
   normalizeAppRole,
 } from "@/lib/roles";
 
+type PatientGroupItem = {
+  id: string;
+  name: string;
+};
+
+type PatientUserItem = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+type PatientProfileItem = {
+  id: string;
+  name: string;
+  age: number;
+  dni: string | null;
+  groupId: string;
+  group: PatientGroupItem | null;
+  clinicalSummary: string | null;
+  criticalMedications: string | null;
+  emergencyAlerts: string | null;
+  triageMessage: string | null;
+  emergencyContacts: string | null;
+};
+
+type PatientMemberItem = {
+  id: string;
+  userId: string;
+  groupId: string;
+  role: string;
+  user: PatientUserItem;
+  group: PatientGroupItem;
+};
+
 function renderMultilineValue(value: string | null | undefined) {
   return value || "Sin registrar";
 }
@@ -30,6 +64,10 @@ export default async function PatientsPage() {
     viewer.role,
     "manage_family_workspace"
   );
+  const groups = data.groups as PatientGroupItem[];
+  const users = data.users as PatientUserItem[];
+  const patients = data.patients as PatientProfileItem[];
+  const members = data.members as PatientMemberItem[];
 
   return (
     <div className="space-y-6">
@@ -120,7 +158,7 @@ export default async function PatientsPage() {
                     <option value="" disabled>
                       Selecciona un grupo
                     </option>
-                    {data.groups.map((group) => (
+                    {groups.map((group) => (
                       <option key={group.id} value={group.id}>
                         {group.name}
                       </option>
@@ -171,7 +209,7 @@ export default async function PatientsPage() {
                     <option value="" disabled>
                       Selecciona un colaborador
                     </option>
-                    {data.users.map((user) => (
+                    {users.map((user) => (
                       <option key={user.id} value={user.id}>
                         {user.name} - {user.email}
                       </option>
@@ -190,7 +228,7 @@ export default async function PatientsPage() {
                     <option value="" disabled>
                       Selecciona un grupo
                     </option>
-                    {data.groups.map((group) => (
+                    {groups.map((group) => (
                       <option key={group.id} value={group.id}>
                         {group.name}
                       </option>
@@ -236,9 +274,9 @@ export default async function PatientsPage() {
         </div>
 
         <div className="space-y-4">
-          {data.groups.map((group) => {
-            const groupPatients = data.patients.filter((patient) => patient.groupId === group.id);
-            const groupMembers = data.members.filter((member) => member.groupId === group.id);
+          {groups.map((group) => {
+            const groupPatients = patients.filter((patient) => patient.groupId === group.id);
+            const groupMembers = members.filter((member) => member.groupId === group.id);
 
             return (
               <article
@@ -318,7 +356,7 @@ export default async function PatientsPage() {
                                     defaultValue={member.groupId}
                                     className="w-full rounded border border-white/20 bg-black px-3 py-2"
                                   >
-                                    {data.groups.map((optionGroup) => (
+                                    {groups.map((optionGroup) => (
                                       <option key={optionGroup.id} value={optionGroup.id}>
                                         {optionGroup.name}
                                       </option>
@@ -374,7 +412,7 @@ export default async function PatientsPage() {
         </div>
 
         <div className="space-y-4">
-          {data.patients.map((patient) => (
+          {patients.map((patient) => (
             <article
               key={patient.id}
               className="rounded-2xl border border-white/20 bg-black/20 p-4"
@@ -428,7 +466,7 @@ export default async function PatientsPage() {
                             className="w-full rounded border border-white/20 bg-black px-3 py-2"
                             required
                           >
-                            {data.groups.map((group) => (
+                            {groups.map((group) => (
                               <option key={group.id} value={group.id}>
                                 {group.name}
                               </option>
@@ -563,7 +601,7 @@ export default async function PatientsPage() {
         <section className="rounded-2xl border border-white/15 bg-white/5 p-4 md:p-5">
           <h2 className="mb-4 text-lg font-semibold">Equipo visible</h2>
           <div className="space-y-2">
-            {data.members.map((member) => (
+            {members.map((member) => (
               <div key={member.id} className="rounded border border-white/20 p-3">
                 <p><strong>Usuario:</strong> {member.user.name}</p>
                 <p><strong>Grupo:</strong> {member.group.name}</p>
